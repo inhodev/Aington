@@ -1,0 +1,17 @@
+{
+  "name": "career-scope",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @career-scope/api & npm run dev --workspace @career-scope/web",
+    "dev:web": "npm run dev --workspace @career-scope/web",
+    "dev:api": "npm run dev --workspace @career-scope/api",
+    "build": "npm run build --workspace @career-scope/api && npm run build --workspace @career-scope/web",
+    "lint": "npm run lint --workspace @career-scope/web",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

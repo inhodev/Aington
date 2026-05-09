@@ -1,0 +1,26 @@
+{
+  "name": "@career-scope/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "../../node_modules/.bin/next dev -p 3000",
+    "build": "../../node_modules/.bin/next build",
+    "start": "../../node_modules/.bin/next start -p 3000",
+    "lint": "../../node_modules/.bin/eslint src",
+    "typecheck": "../../node_modules/.bin/tsc --noEmit"
+  },
+  "dependencies": {
+    "lucide-react": "^1.14.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^16.2.6",
+    "typescript": "^5.7.2"
+  }
+}
