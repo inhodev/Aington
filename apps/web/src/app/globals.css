@@ -1733,7 +1733,13 @@ button {
   gap: 24px;
 }
 
-.app-user-tools > button {
+.notification-shell {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.notification-shell > button {
   position: relative;
   display: grid;
   place-items: center;
@@ -1745,7 +1751,7 @@ button {
   border-radius: 8px;
 }
 
-.app-user-tools > button span {
+.notification-shell > button span {
   position: absolute;
   top: 6px;
   right: 8px;
@@ -1754,6 +1760,62 @@ button {
   background: var(--blue);
   border: 2px solid #fff;
   border-radius: 50%;
+}
+
+.operator-notice-popover {
+  position: absolute;
+  top: 50px;
+  right: -18px;
+  z-index: 60;
+  display: grid;
+  gap: 12px;
+  width: 336px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 22px 60px rgba(21, 31, 54, 0.16);
+}
+
+.operator-notice-popover::before {
+  position: absolute;
+  top: -7px;
+  right: 45px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.operator-notice-popover article {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #edf1f8;
+  border-radius: 8px;
+}
+
+.operator-notice-popover strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.operator-notice-popover p {
+  margin: 0;
+  color: #526075;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.operator-notice-popover small {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .app-profile {
@@ -4066,9 +4128,22 @@ button {
   }
 
   .app-user-tools {
+    position: relative;
     width: 100%;
     justify-content: flex-start;
     gap: 12px;
+  }
+
+  .operator-notice-popover {
+    top: 48px;
+    right: auto;
+    left: 0;
+    width: min(336px, calc(100vw - 28px));
+  }
+
+  .operator-notice-popover::before {
+    right: auto;
+    left: 16px;
   }
 
   .app-profile strong {

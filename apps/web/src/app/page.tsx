@@ -134,6 +134,7 @@ type Step =
   | "dashboard";
 
 type DashboardTab = "home" | "report" | "networking" | "profile" | "settings";
+type NetworkFilter = "전체" | "해커톤" | "공모전" | "포트폴리오 피드백" | "사이드프로젝트";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const LOGIN_STORAGE_KEY = "career-scope-logged-in";
@@ -149,6 +150,60 @@ const fieldChips = [
   "사이드프로젝트",
   "취업준비",
 ];
+
+const networkFilters: NetworkFilter[] = [
+  "전체",
+  "해커톤",
+  "공모전",
+  "포트폴리오 피드백",
+  "사이드프로젝트",
+];
+
+const networkFilterCopy: Record<
+  NetworkFilter,
+  { eyebrow: string; title: string; description: string; template: string }
+> = {
+  전체: {
+    eyebrow: "커리어 동료 추천",
+    title: "함께 성장할 가능성이 높은 사용자",
+    description:
+      "전공, 활동 이력, 관심 태그를 기준으로 지금 연락하기 좋은 동료를 우선 추천합니다.",
+    template:
+      "“같은 백엔드 관심사라 연락드려요. 이번 해커톤에서 API 설계와 배포를 같이 맡아볼 동료를 찾고 있습니다.”",
+  },
+  해커톤: {
+    eyebrow: "해커톤 팀빌딩",
+    title: "짧은 시간 안에 같이 만들 수 있는 동료",
+    description:
+      "역할이 겹치지 않고 MVP 제작 경험을 함께 쌓기 좋은 사용자를 보여줍니다.",
+    template:
+      "“이번 해커톤에서 API 설계와 배포를 맡을 동료를 찾고 있어요. 관심사가 비슷해서 같이 팀을 해보고 싶습니다.”",
+  },
+  공모전: {
+    eyebrow: "공모전 동료",
+    title: "문제 정의와 제출 경험을 같이 쌓을 동료",
+    description:
+      "AI, 데이터, 서비스 기획 태그를 기준으로 공모전 준비에 맞는 사용자를 추천합니다.",
+    template:
+      "“데이터 분석 공모전을 준비 중인데 역할을 나눠 같이 제출까지 해보고 싶어요. 관심 있으시면 이야기 나눠보고 싶습니다.”",
+  },
+  "포트폴리오 피드백": {
+    eyebrow: "포트폴리오 피드백",
+    title: "서로 결과물을 봐줄 수 있는 사용자",
+    description:
+      "프로젝트 경험과 기술 스택이 가까워 포트폴리오 리뷰를 주고받기 좋은 사용자입니다.",
+    template:
+      "“포트폴리오를 서로 보고 피드백을 주고받고 싶어요. 프로젝트 설명 방식과 기술 선택을 같이 점검해보면 좋겠습니다.”",
+  },
+  사이드프로젝트: {
+    eyebrow: "사이드프로젝트",
+    title: "꾸준히 같이 만들 가능성이 높은 동료",
+    description:
+      "서비스 기획, 백엔드, 데이터 분석처럼 장기 협업 역할이 맞물리는 사용자를 보여줍니다.",
+    template:
+      "“사이드프로젝트로 작게 출시까지 해볼 팀원을 찾고 있어요. 관심 분야가 맞아서 같이 이야기해보고 싶습니다.”",
+  },
+};
 
 const fallbackInsight: Insight = {
   target: {
@@ -304,11 +359,7 @@ export default function Home() {
   const [department, setDepartment] = useState("컴퓨터공학과");
   const [grade, setGrade] = useState("전체");
   const [insight, setInsight] = useState<Insight | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.localStorage.getItem(LOGIN_STORAGE_KEY) === "true",
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profileName, setProfileName] = useState("김하늘");
   const [introLength, setIntroLength] = useState(43);
   const [interestChips, setInterestChips] = useState(["개발"]);
@@ -350,6 +401,11 @@ export default function Home() {
       }, 0);
       return () => window.clearTimeout(timer);
     }
+
+    const timer = window.setTimeout(() => {
+      setIsLoggedIn(window.localStorage.getItem(LOGIN_STORAGE_KEY) === "true");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function handleAnalyze() {
@@ -918,6 +974,7 @@ function AppDashboard({
     return isDashboardTab(tab) ? tab : "home";
   });
   const [showPaymentDemo, setShowPaymentDemo] = useState(false);
+  const [showOperatorNotice, setShowOperatorNotice] = useState(false);
   const peers = [...insight.peers, ...dashboardExtraPeers].slice(0, 5);
   const tabHeading = dashboardTabHeadings[activeTab];
 
@@ -995,10 +1052,32 @@ function AppDashboard({
             <p>{tabHeading.description}</p>
           </div>
           <div className="app-user-tools">
-            <button aria-label="알림">
-              <Bell size={23} />
-              <span />
-            </button>
+            <div className="notification-shell">
+              <button
+                aria-expanded={showOperatorNotice}
+                aria-label="운영자 알림"
+                onClick={() => setShowOperatorNotice((isOpen) => !isOpen)}
+                type="button"
+              >
+                <Bell size={23} />
+                <span />
+              </button>
+              {showOperatorNotice && (
+                <div className="operator-notice-popover" role="status">
+                  <div className="section-title">
+                    <Bell size={18} />
+                    <h3>운영자 알림</h3>
+                  </div>
+                  {operatorNotices.map((notice) => (
+                    <article key={notice.title}>
+                      <strong>{notice.title}</strong>
+                      <p>{notice.message}</p>
+                      <small>{notice.time}</small>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="app-profile">
               <div className="avatar">
                 <Image
@@ -1331,9 +1410,13 @@ function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
 
 function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
   const [sentPeerId, setSentPeerId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<NetworkFilter>("전체");
   const featuredPeers = peers.map((peer, index) => ({
     ...peer,
     matchScore: [92, 88, 84, 81, 78][index] || 76,
+    category: ["해커톤", "공모전", "포트폴리오 피드백", "사이드프로젝트", "사이드프로젝트"][
+      index
+    ] as Exclude<NetworkFilter, "전체">,
     intent: ["해커톤 팀빌딩", "공모전 동료", "포트폴리오 피드백", "사이드프로젝트", "커피챗"][index] || "협업",
     note: [
       "백엔드와 API 관심사가 겹치고 인턴 준비 단계가 비슷합니다.",
@@ -1343,75 +1426,84 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
       "서비스 기획과 백엔드 협업 목표가 맞물립니다.",
     ][index] || "관심 분야와 활동 목표가 가깝습니다.",
   }));
+  const filteredPeers =
+    activeFilter === "전체"
+      ? featuredPeers
+      : featuredPeers.filter((peer) => peer.category === activeFilter);
+  const activeFilterCopy = networkFilterCopy[activeFilter];
 
   return (
     <section className="networking-page">
       <div className="networking-toolbar">
-        {["전체", "해커톤", "공모전", "포트폴리오 피드백", "사이드프로젝트"].map(
-          (filter, index) => (
-            <button className={index === 0 ? "active" : ""} key={filter} type="button">
-              {filter}
-            </button>
-          ),
-        )}
+        {networkFilters.map((filter) => (
+          <button
+            className={activeFilter === filter ? "active" : ""}
+            key={filter}
+            onClick={() => setActiveFilter(filter)}
+            type="button"
+          >
+            {filter}
+          </button>
+        ))}
       </div>
 
       <div className="networking-layout">
         <div className="networking-main">
           <section className="networking-hero-card">
             <div>
-              <p className="eyebrow">커리어 동료 추천</p>
-              <h2>함께 성장할 가능성이 높은 사용자</h2>
-              <p>
-                전공, 활동 이력, 관심 태그를 기준으로 지금 연락하기 좋은 동료를 우선 추천합니다.
-              </p>
+              <p className="eyebrow">{activeFilterCopy.eyebrow}</p>
+              <h2>{activeFilterCopy.title}</h2>
+              <p>{activeFilterCopy.description}</p>
             </div>
             <div className="networking-hero-stats">
-              <strong>5명</strong>
+              <strong>{filteredPeers.length}명</strong>
               <span>오늘 추천</span>
             </div>
           </section>
 
           <div className="networking-grid">
-            {featuredPeers.map((peer, index) => (
-              <article className="networking-card" key={peer.id}>
-                <header>
-                  <Image
-                    src={`/assets/avatar-peer-${index + 1}.webp`}
-                    alt=""
-                    width={58}
-                    height={58}
-                    unoptimized
-                  />
-                  <div>
-                    <h3>{peer.name}</h3>
-                    <p>{peer.schoolHidden}</p>
+            {filteredPeers.map((peer) => {
+              const avatarIndex = featuredPeers.findIndex((item) => item.id === peer.id) + 1;
+              return (
+                <article className="networking-card" key={peer.id}>
+                  <header>
+                    <Image
+                      src={`/assets/avatar-peer-${avatarIndex}.webp`}
+                      alt=""
+                      width={58}
+                      height={58}
+                      unoptimized
+                    />
+                    <div>
+                      <h3>{peer.name}</h3>
+                      <p>{peer.schoolHidden}</p>
+                    </div>
+                    <strong>{peer.matchScore}%</strong>
+                  </header>
+                  <div className="networking-intent">
+                    <Target size={16} />
+                    {peer.intent}
                   </div>
-                  <strong>{peer.matchScore}%</strong>
-                </header>
-                <div className="networking-intent">
-                  <Target size={16} />
-                  {peer.intent}
-                </div>
-                <p>{peer.note}</p>
-                <div className="networking-tags">
-                  {peer.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
-                <footer>
-                  <button type="button">프로필 보기</button>
-                  <button
-                    className={sentPeerId === peer.id ? "sent" : ""}
-                    onClick={() => setSentPeerId(peer.id)}
-                    type="button"
-                  >
-                    <MessageSquareText size={16} />
-                    {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
-                  </button>
-                </footer>
-              </article>
-            ))}
+                  <p>{peer.note}</p>
+                  <div className="networking-tags">
+                    {peer.tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                  <footer>
+                    <button type="button">프로필 보기</button>
+                    <button
+                      className={sentPeerId === peer.id ? "sent" : ""}
+                      onClick={() => setSentPeerId(peer.id)}
+                      type="button"
+                    >
+                      <MessageSquareText size={16} />
+                      {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
+                    </button>
+                  </footer>
+                </article>
+              );
+            })}
           </div>
         </div>
 
@@ -1438,10 +1530,7 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
               <Lightbulb size={20} />
               <h3>추천 편지</h3>
             </div>
-            <p>
-              “같은 백엔드 관심사라 연락드려요. 이번 해커톤에서 API 설계와 배포를 같이
-              맡아볼 동료를 찾고 있습니다.”
-            </p>
+            <p>{activeFilterCopy.template}</p>
             <button type="button">
               <Send size={16} />
               템플릿으로 시작
@@ -1802,6 +1891,24 @@ const networkRequests = [
   {
     name: "서비스 기획형 동료",
     message: "포트폴리오 피드백을 서로 주고받자는 요청을 보냈어요.",
+  },
+];
+
+const operatorNotices = [
+  {
+    title: "운영자 공지",
+    message: "네트워킹 요청은 상대가 수락한 뒤에만 연락처가 공개됩니다.",
+    time: "방금 전",
+  },
+  {
+    title: "심화 리포트 안내",
+    message: "비교 보기와 활동 우선순위는 4,900원 심화 리포트에 포함되어 있어요.",
+    time: "10분 전",
+  },
+  {
+    title: "매칭 품질 업데이트",
+    message: "포트폴리오 태그를 추가하면 추천 동료 정확도가 더 올라갑니다.",
+    time: "오늘",
   },
 ];
 
