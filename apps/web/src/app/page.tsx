@@ -179,7 +179,7 @@ const LOGIN_STORAGE_KEY = "career-scope-logged-in";
 const FIELD_STORAGE_KEY = "career-scope-selected-field";
 const CURRENT_USER_ID = "user-current";
 const DEFAULT_DEMO_SCHOOL = "경기대학교";
-const DEFAULT_DEMO_DEPARTMENT = "컴퓨터공학전공";
+const DEFAULT_DEMO_DEPARTMENT = "컴퓨터공학과";
 const schoolOptions = [
   "경기대학교",
   "인하대학교",
@@ -194,7 +194,6 @@ const schoolOptions = [
 ];
 const majorOptions = [
   "컴퓨터공학과",
-  "컴퓨터공학전공",
   "소프트웨어학과",
   "컴퓨터학과",
   "컴퓨터과학과",
@@ -213,41 +212,55 @@ const schoolMajorOptions: Record<string, string[]> = {
   한양대학교: ["컴퓨터소프트웨어학부", "데이터사이언스학부", "정보시스템학과"],
   아주대학교: ["소프트웨어학과", "사이버보안학과", "인공지능융합학과"],
   인천대학교: ["인공지능학과", "컴퓨터공학부", "정보통신공학과"],
-  가천대학교: ["데이터사이언스학과", "컴퓨터공학전공", "소프트웨어전공"],
-  경기대학교: ["컴퓨터공학전공", "컴퓨터공학과", "인공지능전공", "산업경영공학과"],
+  가천대학교: ["데이터사이언스학과", "컴퓨터공학과", "소프트웨어전공"],
+  경기대학교: ["컴퓨터공학과", "인공지능전공", "산업경영공학과"],
   용인대학교: ["전자공학과", "컴퓨터과학전공", "AI융합학부"],
 };
 const careerFieldOptions = [
-  "웹/앱 개발 (Web/App)",
-  "인공지능 (AI)",
-  "데이터베이스 (DB)",
-  "네트워크 (Network)",
-  "임베디드 (Embedded)",
-  "컴퓨터 그래픽스 (Graphics)",
-  "정보보호 및 사이버 보안 (Security)",
-  "클라우드 컴퓨팅 (Cloud)",
-  "시스템 소프트웨어 (System)",
-  "데이터 과학 및 빅데이터 (Data Science)",
-  "소프트웨어 공학 (Software Engineering)",
-  "게임 개발 (Game)",
-  "HCI (인간-컴퓨터 상호작용)",
-  "블록체인 (Blockchain)",
+  "웹/앱 개발",
+  "인공지능",
+  "데이터베이스",
+  "네트워크",
+  "임베디드",
+  "컴퓨터 그래픽스",
+  "정보보호 및 사이버 보안",
+  "클라우드 컴퓨팅",
+  "시스템 소프트웨어",
+  "데이터 과학 및 빅데이터",
+  "소프트웨어 공학",
+  "게임 개발",
+  "HCI",
+  "블록체인",
 ];
 const legacyCareerFieldMap: Record<string, string> = {
-  백엔드: "웹/앱 개발 (Web/App)",
-  프론트엔드: "웹/앱 개발 (Web/App)",
-  모바일: "웹/앱 개발 (Web/App)",
-  "AI/ML": "인공지능 (AI)",
-  데이터분석: "데이터 과학 및 빅데이터 (Data Science)",
-  알고리즘: "소프트웨어 공학 (Software Engineering)",
-  시스템: "시스템 소프트웨어 (System)",
-  보안: "정보보호 및 사이버 보안 (Security)",
-  클라우드: "클라우드 컴퓨팅 (Cloud)",
-  오픈소스: "소프트웨어 공학 (Software Engineering)",
-  "인턴 준비": "소프트웨어 공학 (Software Engineering)",
-  공모전: "소프트웨어 공학 (Software Engineering)",
-  해커톤: "소프트웨어 공학 (Software Engineering)",
-  "창업 지향": "소프트웨어 공학 (Software Engineering)",
+  백엔드: "웹/앱 개발",
+  프론트엔드: "웹/앱 개발",
+  모바일: "웹/앱 개발",
+  "웹/앱 개발 (Web/App)": "웹/앱 개발",
+  "AI/ML": "인공지능",
+  "인공지능 (AI)": "인공지능",
+  "데이터베이스 (DB)": "데이터베이스",
+  "네트워크 (Network)": "네트워크",
+  "임베디드 (Embedded)": "임베디드",
+  "컴퓨터 그래픽스 (Graphics)": "컴퓨터 그래픽스",
+  "정보보호 및 사이버 보안 (Security)": "정보보호 및 사이버 보안",
+  "클라우드 컴퓨팅 (Cloud)": "클라우드 컴퓨팅",
+  "시스템 소프트웨어 (System)": "시스템 소프트웨어",
+  "데이터 과학 및 빅데이터 (Data Science)": "데이터 과학 및 빅데이터",
+  "소프트웨어 공학 (Software Engineering)": "소프트웨어 공학",
+  "게임 개발 (Game)": "게임 개발",
+  "HCI (인간-컴퓨터 상호작용)": "HCI",
+  "블록체인 (Blockchain)": "블록체인",
+  데이터분석: "데이터 과학 및 빅데이터",
+  알고리즘: "소프트웨어 공학",
+  시스템: "시스템 소프트웨어",
+  보안: "정보보호 및 사이버 보안",
+  클라우드: "클라우드 컴퓨팅",
+  오픈소스: "소프트웨어 공학",
+  "인턴 준비": "소프트웨어 공학",
+  공모전: "소프트웨어 공학",
+  해커톤: "소프트웨어 공학",
+  "창업 지향": "소프트웨어 공학",
 };
 
 type DummyStudent = {
@@ -259,20 +272,20 @@ type DummyStudent = {
 };
 
 const dummyStudents: DummyStudent[] = [
-  { id: "stu-1", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "소프트웨어 공학 (Software Engineering)", "데이터 과학 및 빅데이터 (Data Science)"] },
-  { id: "stu-2", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "시스템 소프트웨어 (System)", "데이터베이스 (DB)"] },
-  { id: "stu-3", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "인공지능 (AI)", "소프트웨어 공학 (Software Engineering)"] },
-  { id: "stu-4", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "정보보호 및 사이버 보안 (Security)", "네트워크 (Network)"] },
-  { id: "stu-5", school: "연세대학교", major: "컴퓨터과학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "클라우드 컴퓨팅 (Cloud)", "데이터베이스 (DB)"] },
-  { id: "stu-6", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "시스템 소프트웨어 (System)", "정보보호 및 사이버 보안 (Security)"] },
-  { id: "stu-7", school: "아주대학교", major: "소프트웨어학과", curriculum: "소프트웨어학과", fields: ["웹/앱 개발 (Web/App)", "HCI (인간-컴퓨터 상호작용)", "소프트웨어 공학 (Software Engineering)"] },
-  { id: "stu-8", school: "인천대학교", major: "인공지능학과", curriculum: "인공지능학과", fields: ["인공지능 (AI)", "데이터 과학 및 빅데이터 (Data Science)", "컴퓨터 그래픽스 (Graphics)"] },
-  { id: "stu-9", school: "가천대학교", major: "데이터사이언스학과", curriculum: "데이터사이언스학과", fields: ["데이터 과학 및 빅데이터 (Data Science)", "인공지능 (AI)", "데이터베이스 (DB)"] },
-  { id: "stu-10", school: "경기대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "시스템 소프트웨어 (System)", "네트워크 (Network)"] },
-  { id: "stu-11", school: "용인대학교", major: "전자공학과", curriculum: "전자공학과", fields: ["임베디드 (Embedded)", "시스템 소프트웨어 (System)", "네트워크 (Network)"] },
-  { id: "stu-12", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["소프트웨어 공학 (Software Engineering)", "웹/앱 개발 (Web/App)", "게임 개발 (Game)"] },
-  { id: "stu-13", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["블록체인 (Blockchain)", "웹/앱 개발 (Web/App)", "네트워크 (Network)"] },
-  { id: "stu-14", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["컴퓨터 그래픽스 (Graphics)", "웹/앱 개발 (Web/App)", "클라우드 컴퓨팅 (Cloud)"] },
+  { id: "stu-1", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "소프트웨어 공학", "데이터 과학 및 빅데이터"] },
+  { id: "stu-2", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "시스템 소프트웨어", "데이터베이스"] },
+  { id: "stu-3", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "인공지능", "소프트웨어 공학"] },
+  { id: "stu-4", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "정보보호 및 사이버 보안", "네트워크"] },
+  { id: "stu-5", school: "연세대학교", major: "컴퓨터과학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "클라우드 컴퓨팅", "데이터베이스"] },
+  { id: "stu-6", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "시스템 소프트웨어", "정보보호 및 사이버 보안"] },
+  { id: "stu-7", school: "아주대학교", major: "소프트웨어학과", curriculum: "소프트웨어학과", fields: ["웹/앱 개발", "HCI", "소프트웨어 공학"] },
+  { id: "stu-8", school: "인천대학교", major: "인공지능학과", curriculum: "인공지능학과", fields: ["인공지능", "데이터 과학 및 빅데이터", "컴퓨터 그래픽스"] },
+  { id: "stu-9", school: "가천대학교", major: "데이터사이언스학과", curriculum: "데이터사이언스학과", fields: ["데이터 과학 및 빅데이터", "인공지능", "데이터베이스"] },
+  { id: "stu-10", school: "경기대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발", "시스템 소프트웨어", "네트워크"] },
+  { id: "stu-11", school: "용인대학교", major: "전자공학과", curriculum: "전자공학과", fields: ["임베디드", "시스템 소프트웨어", "네트워크"] },
+  { id: "stu-12", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["소프트웨어 공학", "웹/앱 개발", "게임 개발"] },
+  { id: "stu-13", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["블록체인", "웹/앱 개발", "네트워크"] },
+  { id: "stu-14", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["컴퓨터 그래픽스", "웹/앱 개발", "클라우드 컴퓨팅"] },
 ];
 
 const curriculumComparisonRows = [
@@ -468,28 +481,28 @@ const fallbackInsight: Insight = {
     {
       id: "peer-1",
       name: "웹/앱 개발 지망 3학년",
-      schoolHidden: "서울권 주요 대학",
+      schoolHidden: "서울대학교 컴퓨터공학과",
       avatar: "/assets/peer-profile-1.webp",
       intro: "분산 시스템과 API 설계에 관심이 많고, 팀 프로젝트 경험을 같이 쌓을 사람을 찾고 있어요.",
       portfolio: "github.com/demo/backend-student",
-      tags: ["웹/앱 개발 (Web/App)", "데이터베이스 (DB)", "API"],
+      tags: ["웹/앱 개발", "데이터베이스", "API"],
     },
     {
       id: "peer-2",
       name: "AI 프로덕트 빌더",
-      schoolHidden: "수도권 사립대",
+      schoolHidden: "연세대학교 인공지능학과",
       avatar: "/assets/peer-profile-2.webp",
       intro: "데이터 분석 공모전과 해커톤을 같이 나갈 컴공 계열 동료를 찾고 있어요.",
       portfolio: "notion.site/demo-ai-builder",
-      tags: ["인공지능 (AI)", "데이터 과학 및 빅데이터 (Data Science)", "HCI (인간-컴퓨터 상호작용)"],
+      tags: ["인공지능", "데이터 과학 및 빅데이터", "HCI"],
     },
   ],
 };
 
 export default function Home() {
   const [step, setStep] = useState<Step>("landing");
-  const [school, setSchool] = useState(DEFAULT_DEMO_SCHOOL);
-  const [department, setDepartment] = useState(DEFAULT_DEMO_DEPARTMENT);
+  const [school, setSchool] = useState("");
+  const [department, setDepartment] = useState("");
   const [field, setField] = useState("");
   const [insight, setInsight] = useState<Insight | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -526,9 +539,9 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const view = params.get("view");
       const storedField = window.sessionStorage.getItem(FIELD_STORAGE_KEY);
-      const selectedSchool = params.get("school") || DEFAULT_DEMO_SCHOOL;
-      const selectedMajor = params.get("major") || DEFAULT_DEMO_DEPARTMENT;
-      const rawField = params.get("field") || storedField;
+      const selectedSchool = params.get("school") || "";
+      const selectedMajor = normalizeMajorName(params.get("major") || "");
+      const rawField = params.get("field") || (view ? storedField : null);
       const selectedField = rawField ? normalizeCareerField(rawField) : "";
 
       setSchool(selectedSchool);
@@ -605,7 +618,7 @@ export default function Home() {
   }
 
   async function handleAnalyze() {
-    if (!field) {
+    if (!school.trim() || !department.trim() || !field) {
       return;
     }
 
@@ -761,7 +774,7 @@ export default function Home() {
               placeholder="예: 경기, 경기대, 경기대학교"
               value={school}
               options={schoolOptions}
-              popularOptions={[DEFAULT_DEMO_SCHOOL, "인하대학교", "서울대학교"]}
+              popularOptions={[DEFAULT_DEMO_SCHOOL, "서울대학교", "연세대학교"]}
               onChange={(nextSchool) => {
                 setSchool(nextSchool);
                 const nextMajorOptions = getMajorOptionsForSchool(nextSchool);
@@ -2066,17 +2079,6 @@ function NetworkingPage({
             ))}
           </section>
 
-          <section className="networking-template-card">
-            <div className="section-title">
-              <Lightbulb size={20} />
-              <h3>추천 메시지</h3>
-            </div>
-            <p>{activeFilterCopy.template}</p>
-            <button type="button">
-              <span aria-hidden="true">✉</span>
-              메시지 템플릿 사용
-            </button>
-          </section>
         </aside>
       </div>
     </section>
@@ -2305,10 +2307,39 @@ function ProfilePage({
           </section>
         </article>
 
-        <article className="profile-panel skill-panel">
-          <h3>핵심 역량</h3>
-          <CompetencyRadar />
-          <p>5점 만점 기준 (과연 AI 분석)</p>
+        <article className="profile-panel service-activity-panel">
+          <div className="service-activity-heading">
+            <div>
+              <p className="eyebrow">과연 활동 내역</p>
+              <h3>서비스 활동</h3>
+            </div>
+            <span>{isOwnProfile ? "내 기록" : "공개 기록"}</span>
+          </div>
+
+          <div className="service-activity-list">
+            {buildServiceActivityHistory(displayStats).map((item) => {
+              const Icon = item.icon;
+              return (
+                <div className={`service-activity-item ${item.tone}`} key={item.label}>
+                  <span>
+                    <Icon size={18} />
+                  </span>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p>{item.description}</p>
+                  </div>
+                  <b>{item.value}</b>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="service-activity-summary">
+            <CheckCircle2 size={18} />
+            <p>
+              최근 활동을 기준으로 네트워킹 추천과 모임 초대 우선순위가 업데이트됩니다.
+            </p>
+          </div>
         </article>
       </section>
 
@@ -2349,54 +2380,6 @@ function ProfilePage({
         </div>
       </section>
     </section>
-  );
-}
-
-function CompetencyRadar() {
-  const points = [
-    [150, 42],
-    [232, 90],
-    [232, 184],
-    [150, 232],
-    [68, 184],
-    [68, 90],
-  ];
-
-  return (
-    <div className="competency-radar">
-      <svg viewBox="0 0 300 270" aria-label="핵심 역량 레이더 차트">
-        {[0.25, 0.5, 0.75, 1].map((scale) => (
-          <polygon
-            className="radar-grid-line"
-            key={scale}
-            points={points
-              .map(([x, y]) => `${150 + (x - 150) * scale},${137 + (y - 137) * scale}`)
-              .join(" ")}
-          />
-        ))}
-        {points.map(([x, y]) => (
-          <line className="radar-spoke" key={`${x}-${y}`} x1="150" x2={x} y1="137" y2={y} />
-        ))}
-        <polygon className="radar-value" points="150,55 218,96 220,176 150,212 80,174 74,102" />
-        {[
-          ["문제 해결력", "4.6", 150, 20],
-          ["프로그래밍", "4.3", 252, 76],
-          ["데이터 분석", "4.1", 254, 188],
-          ["커뮤니케이션", "4.2", 150, 256],
-          ["기획력", "3.8", 45, 188],
-          ["협업", "4.4", 44, 76],
-        ].map(([label, score, x, y]) => (
-          <text className="radar-text" key={label} x={x} y={y}>
-            <tspan x={x} dy="0">
-              {label}
-            </tspan>
-            <tspan className="radar-score" x={x} dy="17">
-              {score}
-            </tspan>
-          </text>
-        ))}
-      </svg>
-    </div>
   );
 }
 
@@ -2837,7 +2820,7 @@ const dashboardExtraPeers: Insight["peers"] = [
     avatar: "/assets/peer-profile-3.webp",
     intro: "시스템 소프트웨어와 보안 설계에 관심이 많아요.",
     portfolio: "demo",
-    tags: ["시스템 소프트웨어 (System)", "정보보호 및 사이버 보안 (Security)", "네트워크 (Network)"],
+    tags: ["시스템 소프트웨어", "정보보호 및 사이버 보안", "네트워크"],
   },
   {
     id: "peer-extra-2",
@@ -2846,7 +2829,7 @@ const dashboardExtraPeers: Insight["peers"] = [
     avatar: "/assets/peer-profile-4.webp",
     intro: "데이터 분석과 Python 프로젝트를 준비 중이에요.",
     portfolio: "demo",
-    tags: ["인공지능 (AI)", "데이터 과학 및 빅데이터 (Data Science)", "Python"],
+    tags: ["인공지능", "데이터 과학 및 빅데이터", "Python"],
   },
   {
     id: "peer-extra-3",
@@ -2855,7 +2838,7 @@ const dashboardExtraPeers: Insight["peers"] = [
     avatar: "/assets/peer-profile-5.webp",
     intro: "웹/앱 서비스와 HCI 기반 협업을 좋아해요.",
     portfolio: "demo",
-    tags: ["웹/앱 개발 (Web/App)", "HCI (인간-컴퓨터 상호작용)", "Firebase"],
+    tags: ["웹/앱 개발", "HCI", "Firebase"],
   },
 ];
 
@@ -2896,6 +2879,10 @@ function normalizeCareerField(field?: string | null) {
 }
 
 function getMajorOptionsForSchool(schoolInput: string) {
+  if (!schoolInput.trim()) {
+    return majorOptions;
+  }
+
   const resolvedSchool = resolveSchoolOption(schoolInput);
   return getUniqueOptions([...(schoolMajorOptions[resolvedSchool] || []), ...majorOptions]);
 }
@@ -2903,7 +2890,7 @@ function getMajorOptionsForSchool(schoolInput: string) {
 function resolveSchoolOption(input: string) {
   const trimmed = input.trim();
   if (!trimmed) {
-    return schoolOptions[0];
+    return "";
   }
 
   return (
@@ -2914,9 +2901,9 @@ function resolveSchoolOption(input: string) {
 }
 
 function resolveMajorOption(input: string, options: string[]) {
-  const trimmed = input.trim();
+  const trimmed = normalizeMajorName(input.trim());
   if (!trimmed) {
-    return options[0] || majorOptions[0];
+    return "";
   }
 
   return (
@@ -2924,6 +2911,14 @@ function resolveMajorOption(input: string, options: string[]) {
     options.find((option) => optionMatchesQuery(option, trimmed)) ||
     trimmed
   );
+}
+
+function normalizeMajorName(major: string) {
+  if (["컴퓨터공학전공", "컴퓨터공학부", "컴공", "컴퓨터 공학과"].includes(major.trim())) {
+    return "컴퓨터공학과";
+  }
+
+  return major;
 }
 
 function getAutocompleteMatches(query: string, options: string[]) {
@@ -2991,6 +2986,41 @@ function buildActivityHistory(stats: PortfolioStats) {
     { label: "논문", count: `${stats.논문}편`, icon: BookOpen, tone: "green" },
     { label: "대회", count: `${stats.대회}회`, icon: Trophy, tone: "violet" },
     { label: "기타", count: `${stats.기타}개`, icon: Globe2, tone: "blue" },
+  ];
+}
+
+function buildServiceActivityHistory(stats: PortfolioStats) {
+  const portfolioTotal = Object.values(stats).reduce((total, count) => total + count, 0);
+
+  return [
+    {
+      label: "분석 리포트",
+      description: "최근 커리큘럼 비교 리포트를 확인했어요.",
+      value: "3회",
+      icon: BarChart3,
+      tone: "indigo",
+    },
+    {
+      label: "메시지",
+      description: "관심 분야가 가까운 동료와 대화를 시작했어요.",
+      value: "8건",
+      icon: MessageSquareText,
+      tone: "emerald",
+    },
+    {
+      label: "모임",
+      description: "참여 가능한 분야 모임을 둘러봤어요.",
+      value: "2개",
+      icon: CalendarDays,
+      tone: "amber",
+    },
+    {
+      label: "포트폴리오 등록",
+      description: "등록한 활동이 추천 정확도에 반영돼요.",
+      value: `${portfolioTotal}개`,
+      icon: Folder,
+      tone: "violet",
+    },
   ];
 }
 

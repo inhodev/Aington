@@ -13,6 +13,8 @@ import { Profile } from "./models/Profile.js";
 
 dotenv.config();
 
+const defaultDemoSchool = "경기대학교";
+const defaultDemoDepartment = "컴퓨터공학과";
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const memoryProfiles: unknown[] = [];
@@ -79,9 +81,14 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/api/insights", async (req, res) => {
-  const school = typeof req.query.school === "string" ? req.query.school : "";
+  const school =
+    typeof req.query.school === "string" && req.query.school.trim()
+      ? req.query.school
+      : defaultDemoSchool;
   const department =
-    typeof req.query.department === "string" ? req.query.department : "";
+    typeof req.query.department === "string" && req.query.department.trim()
+      ? req.query.department
+      : defaultDemoDepartment;
   const grade = typeof req.query.grade === "string" ? req.query.grade : "";
   const semester =
     typeof req.query.semester === "string" ? req.query.semester : "";
@@ -121,9 +128,14 @@ app.get("/api/insights", async (req, res) => {
 });
 
 app.get("/api/curriculum-similarity", async (req, res) => {
-  const school = typeof req.query.school === "string" ? req.query.school : "";
+  const school =
+    typeof req.query.school === "string" && req.query.school.trim()
+      ? req.query.school
+      : defaultDemoSchool;
   const department =
-    typeof req.query.department === "string" ? req.query.department : "";
+    typeof req.query.department === "string" && req.query.department.trim()
+      ? req.query.department
+      : defaultDemoDepartment;
   const grade = typeof req.query.grade === "string" ? req.query.grade : "";
   const semester =
     typeof req.query.semester === "string" ? req.query.semester : "";

@@ -1,3 +1,5 @@
+import { FunctionDeclarationSchemaType, VertexAI, type ResponseSchema } from "@google-cloud/vertexai";
+
 type DeepReportInput = {
   school: string;
   department: string;
@@ -49,8 +51,8 @@ type GeminiGenerateResponse = {
   };
 };
 
-const deepReportSchema = {
-  type: "OBJECT",
+const deepReportSchema: ResponseSchema = {
+  type: FunctionDeclarationSchemaType.OBJECT,
   properties: {
     executiveSummary: { type: "STRING" },
     benchmarkInsights: {
@@ -111,13 +113,69 @@ const deepReportSchema = {
     "riskNotes",
     "sources",
   ],
-};
+} as unknown as ResponseSchema;
 
 export async function buildGeminiDeepReport(input: DeepReportInput): Promise<DeepReport> {
+  const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+  if (project) {
+    return buildVertexDeepReport(input, project);
+  }
+
+  return buildApiKeyDeepReport(input);
+}
+
+async function buildVertexDeepReport(input: DeepReportInput, project: string): Promise<DeepReport> {
+  const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
+  const model = process.env.VERTEX_GEMINI_MODEL || "gemini-2.0-flash-001";
+  const vertexAI = new VertexAI({ project, location });
+  const generativeModel = vertexAI.getGenerativeModel({
+    model,
+    systemInstruction:
+      "You are a Korean career advisor for university students. Generate practical, evidence-grounded premium reports from the provided curriculum and benchmark data. Return JSON only.",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: deepReportSchema,
+      temperature: 0.35,
+      maxOutputTokens: 1400,
+    },
+  });
+
+  try {
+    const result = await generativeModel.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildPrompt(input) }],
+        },
+      ],
+    });
+    const text = result.response.candidates?.[0]?.content?.parts
+      ?.map((part) => ("text" in part ? part.text || "" : ""))
+      .join("")
+      .trim();
+
+    if (!text) {
+      throw new GeminiReportError("Vertex AI Gemini returned an empty report.", 502);
+    }
+
+    return normalizeDeepReport(JSON.parse(text) as Record<string, unknown>, `vertex:${model}`);
+  } catch (error) {
+    if (error instanceof GeminiReportError) {
+      throw error;
+    }
+
+    throw new GeminiReportError(
+      error instanceof Error ? error.message : "Failed to generate Vertex AI Gemini report.",
+      502,
+    );
+  }
+}
+
+async function buildApiKeyDeepReport(input: DeepReportInput): Promise<DeepReport> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
     throw new GeminiReportError(
-      "Gemini API key is not configured. Set GEMINI_API_KEY in apps/api/.env.",
+      "Vertex AI is not configured. Set GOOGLE_CLOUD_PROJECT for Vertex AI, or set GEMINI_API_KEY for legacy Gemini API.",
       503,
     );
   }
