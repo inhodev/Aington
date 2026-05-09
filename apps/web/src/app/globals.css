@@ -155,6 +155,17 @@ button {
   font-weight: 900;
 }
 
+.site-header nav .nav-text-button {
+  min-height: 92px;
+  padding: 0;
+  color: #26334a;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-weight: 800;
+}
+
 .site-header nav .icon-nav-button {
   display: grid;
   place-items: center;
@@ -878,6 +889,86 @@ button {
   margin-top: 2px;
 }
 
+.insight-evidence {
+  margin-top: 20px;
+  padding: 26px 28px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.insight-evidence-heading h3 {
+  margin: 0;
+  color: #17213a;
+  font-size: 25px;
+  line-height: 1.32;
+}
+
+.insight-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.insight-evidence article {
+  padding: 18px;
+  background: #fbfcff;
+  border: 1px solid #e3e9f4;
+  border-radius: 8px;
+}
+
+.evidence-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--blue);
+}
+
+.evidence-title strong {
+  color: #17213a;
+  font-size: 16px;
+}
+
+.insight-evidence ul {
+  display: grid;
+  gap: 13px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insight-evidence li {
+  display: grid;
+  gap: 5px;
+}
+
+.insight-evidence b {
+  color: #243047;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.insight-evidence b small {
+  margin-left: 6px;
+  color: var(--blue);
+  font-size: 12px;
+}
+
+.insight-evidence span,
+.insight-evidence p {
+  margin: 0;
+  color: #5e6c83;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.insight-evidence p {
+  color: #738197;
+  font-weight: 700;
+}
+
 .curriculum-ranking {
   margin-top: 20px;
   padding: 26px 28px;
@@ -1106,6 +1197,30 @@ button {
 .signup-notice-card .secondary-cta {
   min-height: 54px;
   font-size: 16px;
+}
+
+.auth-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 28px;
+}
+
+.auth-action-row .secondary-cta {
+  margin: 0;
+}
+
+.ghost-cta {
+  min-height: 54px;
+  padding: 0 22px;
+  color: #26334a;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .onboarding-shell {
@@ -2487,6 +2602,10 @@ button {
     grid-template-columns: minmax(0, 1fr) 82px;
   }
 
+  .insight-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+
   .rank-components {
     grid-column: 1 / -1;
   }
@@ -2618,6 +2737,14 @@ button {
 
   .curriculum-ranking {
     padding: 22px 16px;
+  }
+
+  .insight-evidence {
+    padding: 22px 16px;
+  }
+
+  .insight-evidence-heading h3 {
+    font-size: 21px;
   }
 
   .curriculum-ranking h3 {

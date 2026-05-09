@@ -29,6 +29,7 @@ import {
   UploadCloud,
   User,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -100,6 +101,16 @@ type Insight = {
     myContestCount: number;
     profileCompletion: number;
   };
+  analysis: {
+    totalScore: number;
+    delta: number;
+    metrics: Array<{
+      label: string;
+      score: number;
+    }>;
+    strengths: string[];
+    weaknesses: string[];
+  };
   peers: Array<{
     id: string;
     name: string;
@@ -119,6 +130,7 @@ type Step =
   | "dashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const LOGIN_STORAGE_KEY = "career-scope-logged-in";
 const fieldChips = [
   "AI",
   "개발",
@@ -237,6 +249,29 @@ const fallbackInsight: Insight = {
     myContestCount: 1,
     profileCompletion: 72,
   },
+  analysis: {
+    totalScore: 72,
+    delta: 7,
+    metrics: [
+      { label: "의미근접", score: 78 },
+      { label: "과목일치", score: 36 },
+      { label: "분야균형", score: 86 },
+      { label: "학기구조", score: 62 },
+      { label: "전공폭", score: 74 },
+    ],
+    strengths: [
+      "자료구조, 운영체제, 데이터베이스 과목이 비교군과 직접 겹칩니다.",
+      "프로그래밍, 자료구조, 알고리즘 분야가 공통 강점으로 나타납니다.",
+      "유사 대학과 비교 가능한 커리큘럼 데이터가 충분합니다.",
+      "전공 기초와 프로젝트 과목을 함께 설명하기 좋습니다.",
+    ],
+    weaknesses: [
+      "전공필수/학점 정보가 비어 있는 과목이 많아 학점 가중 비교는 제한적입니다.",
+      "학년별 선택과목 데이터가 더 채워지면 구조 비교 정확도가 올라갑니다.",
+      "AI/머신러닝, 보안 분야는 학교별 편차가 커서 추가 확인이 필요합니다.",
+      "과목 설명 기반 의미 비교를 붙이면 더 정밀해집니다.",
+    ],
+  },
   peers: [
     {
       id: "peer-1",
@@ -263,16 +298,24 @@ export default function Home() {
   const [department, setDepartment] = useState("컴퓨터공학과");
   const [grade, setGrade] = useState("전체");
   const [insight, setInsight] = useState<Insight | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.localStorage.getItem(LOGIN_STORAGE_KEY) === "true",
+  );
   const [profileName, setProfileName] = useState("김하늘");
   const [introLength, setIntroLength] = useState(43);
   const [interestChips, setInterestChips] = useState(["개발"]);
   const [meetChips, setMeetChips] = useState(["개발"]);
 
   const activeInsight = insight || fallbackInsight;
-
+  const reportMetrics = useMemo(
+    () => buildReportMetrics(activeInsight.analysis.metrics),
+    [activeInsight.analysis.metrics],
+  );
   const radarPoints = useMemo(
     () => buildRadarPoints(reportMetrics.map((metric) => metric.score)),
-    [],
+    [reportMetrics],
   );
 
   useEffect(() => {
@@ -294,25 +337,14 @@ export default function Home() {
     }
     if (view === "dashboard") {
       const timer = window.setTimeout(() => {
+        window.localStorage.setItem(LOGIN_STORAGE_KEY, "true");
+        setIsLoggedIn(true);
         setInsight(fallbackInsight);
         setStep("dashboard");
       }, 0);
       return () => window.clearTimeout(timer);
     }
   }, []);
-
-  useEffect(() => {
-    if (step !== "signupNotice") {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setStep("signup");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 1100);
-
-    return () => window.clearTimeout(timer);
-  }, [step]);
 
   async function handleAnalyze() {
     setStep("analyzing");
@@ -374,8 +406,7 @@ export default function Home() {
       // Demo flow continues even if the local API is not running.
     }
 
-    setStep("dashboard");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    completeLogin();
   }
 
   function toggleChip(kind: "interest" | "meet", chip: string) {
@@ -400,10 +431,38 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function completeLogin() {
+    window.localStorage.setItem(LOGIN_STORAGE_KEY, "true");
+    setIsLoggedIn(true);
+    setStep("dashboard");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function goHome() {
+    setStep(isLoggedIn ? "dashboard" : "landing");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openCompareFlow() {
+    if (isLoggedIn) {
+      goHome();
+      return;
+    }
+
+    setStep("signupNotice");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <main>
       {step !== "dashboard" && (
-        <Header active={step} onHome={() => setStep("landing")} />
+        <Header
+          active={step}
+          isLoggedIn={isLoggedIn}
+          onHome={goHome}
+          onLogin={completeLogin}
+          onSignup={continueToSignup}
+        />
       )}
 
       {step === "landing" && (
@@ -511,7 +570,7 @@ export default function Home() {
                     {activeInsight.target.school}
                     <span>{activeInsight.target.department}</span>
                   </h2>
-                  <p>커리어 분석 리포트 결과</p>
+                  <p>{activeInsight.summary}</p>
                 </div>
               </div>
               <button className="download-button">
@@ -524,7 +583,7 @@ export default function Home() {
               <ReportMeta
                 icon={<BookOpen size={18} />}
                 label="분석 기준"
-                value="전국 대학 평균"
+                value="Neon 커리큘럼 DB"
               />
               <ReportMeta
                 icon={<CalendarDays size={18} />}
@@ -541,17 +600,21 @@ export default function Home() {
             <div className="report-stage">
               <section className="score-card">
                 <div className="score-title">
-                  <strong>종합 점수</strong>
+                  <strong>커리큘럼 종합 점수</strong>
                   <Info size={16} />
                 </div>
                 <div className="score-value">
-                  72.6 <span>/ 100</span>
+                  {activeInsight.analysis.totalScore.toFixed(1)} <span>/ 100</span>
                 </div>
                 <div className="score-bar">
-                  <div />
+                  <div style={{ width: `${activeInsight.analysis.totalScore}%` }} />
                 </div>
                 <p>
-                  전국 동일 전공 평균 대비 <span>▲ 8.4</span>
+                  비교군 기준 대비{" "}
+                  <span>
+                    {activeInsight.analysis.delta >= 0 ? "▲" : "▼"}{" "}
+                    {Math.abs(activeInsight.analysis.delta).toFixed(1)}
+                  </span>
                 </p>
               </section>
 
@@ -604,7 +667,7 @@ export default function Home() {
                 {reportMetrics.map((metric) => (
                   <ScoreRow key={metric.label} metric={metric} />
                 ))}
-                <p>각 항목은 전국 동일 전공 평균을 기준으로 산출되었습니다.</p>
+                <p>각 항목은 선택 학과와 비교 대학 커리큘럼의 과목, 분야, 학기 구조를 기준으로 산출되었습니다.</p>
               </section>
             </div>
 
@@ -613,12 +676,7 @@ export default function Home() {
               icon={<ThumbsUp size={34} />}
               title="장점"
               subtitle="강점을 잘 활용하고 더 발전시켜 보세요!"
-              items={[
-                "프로젝트 경험이 우수합니다. 실습 위주의 경험이 풍부하여 실무 적응력이 높습니다.",
-                "전공 심화 학습 수준이 평균보다 높습니다. 심화 과목 이수와 학점 관리가 우수합니다.",
-                "어학 역량이 안정적입니다. 토익/토플 등 공인 어학 성적이 평균 이상입니다.",
-                "꾸준한 학습 태도가 돋보입니다. 학업 성취도와 출석률이 안정적으로 유지되고 있습니다.",
-              ]}
+              items={activeInsight.analysis.strengths}
             />
 
             <ReportNotice
@@ -626,13 +684,10 @@ export default function Home() {
               icon={<AlertCircle size={34} />}
               title="단점"
               subtitle="아쉬운 부분을 보완하여 경쟁력을 높여보세요!"
-              items={[
-                "공모전 및 대외활동 경험이 부족합니다. 다양한 경험을 통해 실무 역량을 강화해보세요.",
-                "취업률 지표가 평균보다 낮습니다. 인턴, 취업 준비 활동을 미리 계획하는 것이 좋습니다.",
-                "전공 관련 자격증 보유가 적습니다. 목표 직무에 맞는 자격증 취득을 추천합니다.",
-                "전공 관련 스터디나 동아리 활동 참여가 적습니다. 네트워킹과 협업 경험을 늘려보세요.",
-              ]}
+              items={activeInsight.analysis.weaknesses}
             />
+
+            <InsightEvidencePanel insight={activeInsight} />
 
             <CurriculumRankingPanel similarity={activeInsight.curriculumSimilarity} />
 
@@ -649,8 +704,8 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              <button className="secondary-cta" onClick={() => setStep("signupNotice")}>
-                다른 학교 학생과 비교하기
+              <button className="secondary-cta" onClick={openCompareFlow}>
+                다른 학생이랑 비교하기
                 <ArrowRight size={20} />
               </button>
             </section>
@@ -664,19 +719,21 @@ export default function Home() {
             <div className="notice-mark">
               <ShieldCheck size={42} />
             </div>
-            <p className="eyebrow">회원가입 필요</p>
-            <h2>다른 학교 학생과 비교하려면 회원가입이 필요해요</h2>
+            <p className="eyebrow">로그인 또는 회원가입</p>
+            <h2>다른 학생과 비교하려면 먼저 계정으로 이어가야 해요</h2>
             <p>
-              기본 정보를 입력하면 같은 계열 학생 비교와 매칭 추천을 이어서 볼 수
-              있어요.
+              로그인하면 바로 메인에서 비교 결과를 볼 수 있고, 처음이라면 간단한
+              회원가입 온보딩 후 메인으로 이동합니다.
             </p>
-            <div className="notice-loader">
-              <div />
+            <div className="auth-action-row">
+              <button className="secondary-cta" onClick={completeLogin}>
+                로그인하고 메인으로
+                <ArrowRight size={20} />
+              </button>
+              <button className="ghost-cta" onClick={continueToSignup}>
+                회원가입하기
+              </button>
             </div>
-            <button className="secondary-cta" onClick={continueToSignup}>
-              회원가입 계속하기
-              <ArrowRight size={20} />
-            </button>
           </div>
         </section>
       )}
@@ -782,7 +839,19 @@ export default function Home() {
   );
 }
 
-function Header({ active, onHome }: { active: Step; onHome: () => void }) {
+function Header({
+  active,
+  isLoggedIn,
+  onHome,
+  onLogin,
+  onSignup,
+}: {
+  active: Step;
+  isLoggedIn: boolean;
+  onHome: () => void;
+  onLogin: () => void;
+  onSignup: () => void;
+}) {
   return (
     <header className="site-header">
       <button className="brand" onClick={onHome}>
@@ -803,7 +872,7 @@ function Header({ active, onHome }: { active: Step; onHome: () => void }) {
         </a>
         <a>진로 가이드</a>
         <a>데이터 인사이트</a>
-        {active === "report" ? (
+        {isLoggedIn ? (
           <>
             <button className="icon-nav-button" aria-label="알림">
               <Bell size={21} />
@@ -813,9 +882,15 @@ function Header({ active, onHome }: { active: Step; onHome: () => void }) {
             </button>
           </>
         ) : (
-          <a>로그인</a>
+          <button className="nav-text-button" onClick={onLogin}>
+            로그인
+          </button>
         )}
-        <button>회원가입</button>
+        {isLoggedIn ? (
+          <button onClick={onHome}>메인</button>
+        ) : (
+          <button onClick={onSignup}>회원가입</button>
+        )}
       </nav>
     </header>
   );
@@ -1090,38 +1165,56 @@ const dashboardExtraPeers: Insight["peers"] = [
   },
 ];
 
-const reportMetrics = [
+type ReportMetric = {
+  label: string;
+  score: number;
+  icon: LucideIcon;
+  position: string;
+};
+
+const reportMetricMeta: Array<Omit<ReportMetric, "score"> & { fallbackScore: number }> = [
   {
-    label: "전공심화",
-    score: 78,
+    label: "의미근접",
+    fallbackScore: 78,
     icon: GraduationCap,
     position: "top",
   },
   {
-    label: "취업률",
-    score: 72,
+    label: "과목일치",
+    fallbackScore: 36,
     icon: Briefcase,
     position: "right-top",
   },
   {
-    label: "공모전",
-    score: 64,
+    label: "분야균형",
+    fallbackScore: 86,
     icon: Trophy,
     position: "right-bottom",
   },
   {
-    label: "어학",
-    score: 68,
+    label: "학기구조",
+    fallbackScore: 62,
     icon: Globe2,
     position: "left-bottom",
   },
   {
-    label: "프로젝트",
-    score: 81,
+    label: "전공폭",
+    fallbackScore: 74,
     icon: Code2,
     position: "left-top",
   },
 ];
+
+function buildReportMetrics(metrics: Insight["analysis"]["metrics"]): ReportMetric[] {
+  return reportMetricMeta.map((metric) => ({
+    label: metric.label,
+    icon: metric.icon,
+    position: metric.position,
+    score:
+      metrics.find((candidate) => candidate.label === metric.label)?.score ??
+      metric.fallbackScore,
+  }));
+}
 
 function buildRadarPoints(scores: number[]) {
   return scores
@@ -1132,7 +1225,7 @@ function buildRadarPoints(scores: number[]) {
 function getRadarPoint(score: number, index: number) {
   const center = 160;
   const radius = 132;
-  const angle = -Math.PI / 2 + (index * Math.PI * 2) / reportMetrics.length;
+  const angle = -Math.PI / 2 + (index * Math.PI * 2) / reportMetricMeta.length;
   const scaled = (score / 100) * radius;
   const x = center + Math.cos(angle) * scaled;
   const y = center + Math.sin(angle) * scaled;
@@ -1162,7 +1255,7 @@ function ReportMeta({
 function ScoreRow({
   metric,
 }: {
-  metric: (typeof reportMetrics)[number];
+  metric: ReportMetric;
 }) {
   const Icon = metric.icon;
   return (
@@ -1205,6 +1298,69 @@ function ReportNotice({
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+function InsightEvidencePanel({ insight }: { insight: Insight }) {
+  return (
+    <section className="insight-evidence">
+      <div className="insight-evidence-heading">
+        <p className="eyebrow">분석 근거</p>
+        <h3>{insight.headline}</h3>
+      </div>
+
+      <div className="insight-evidence-grid">
+        <article>
+          <div className="evidence-title">
+            <Trophy size={20} />
+            <strong>추천 활동</strong>
+          </div>
+          <ul>
+            {insight.activities.map((activity) => (
+              <li key={activity.title}>
+                <b>{activity.title}</b>
+                <span>{activity.stat}</span>
+                <p>{activity.why}</p>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article>
+          <div className="evidence-title">
+            <BookOpen size={20} />
+            <strong>커리큘럼 해석</strong>
+          </div>
+          <ul>
+            {insight.curriculum.map((item) => (
+              <li key={item.name}>
+                <b>{item.name}</b>
+                <span>{item.strength}</span>
+                <p>{item.caution}</p>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article>
+          <div className="evidence-title">
+            <Scale size={20} />
+            <strong>비교 시그널</strong>
+          </div>
+          <ul>
+            {insight.comparisons.slice(0, 3).map((comparison) => (
+              <li key={`${comparison.school}-${comparison.department}`}>
+                <b>
+                  {comparison.school} <small>{comparison.delta}</small>
+                </b>
+                <span>{comparison.department}</span>
+                <p>{comparison.signal}</p>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
     </section>
   );
 }

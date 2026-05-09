@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import {
   buildCurriculumSimilarityFromDatabase,
 } from "./data/curriculumSimilarity.js";
+import { buildCurriculumReport } from "./data/curriculumReport.js";
 import { buildInsight } from "./data/demo.js";
 import { prisma } from "./lib/prisma.js";
 import { Profile } from "./models/Profile.js";
@@ -86,8 +87,9 @@ app.get("/api/insights", async (req, res) => {
     department,
     ...options,
   });
+  const curriculumReport = buildCurriculumReport(curriculumSimilarity);
 
-  res.json({ ...insight, curriculumSimilarity });
+  res.json({ ...insight, ...curriculumReport, curriculumSimilarity });
 });
 
 app.get("/api/curriculum-similarity", async (req, res) => {
