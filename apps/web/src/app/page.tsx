@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BarChart3,
   Bell,
+  Bookmark,
   BookOpen,
   Briefcase,
   CalendarDays,
@@ -17,12 +18,15 @@ import {
   GraduationCap,
   HomeIcon,
   Info,
+  Lightbulb,
   LockKeyhole,
   MessageSquareText,
   Scale,
   School,
+  Send,
   Settings,
   ShieldCheck,
+  Target,
   ThumbsUp,
   Trophy,
   TrendingUp,
@@ -128,6 +132,8 @@ type Step =
   | "signupNotice"
   | "signup"
   | "dashboard";
+
+type DashboardTab = "home" | "report" | "networking" | "profile" | "settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const LOGIN_STORAGE_KEY = "career-scope-logged-in";
@@ -903,7 +909,33 @@ function AppDashboard({
   insight: Insight;
   profileName: string;
 }) {
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
+    if (typeof window === "undefined") {
+      return "home";
+    }
+
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return isDashboardTab(tab) ? tab : "home";
+  });
+  const [showPaymentDemo, setShowPaymentDemo] = useState(false);
   const peers = [...insight.peers, ...dashboardExtraPeers].slice(0, 5);
+  const tabHeading = dashboardTabHeadings[activeTab];
+
+  function selectTab(tab?: DashboardTab) {
+    if (!tab) {
+      return;
+    }
+
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", "dashboard");
+    if (tab === "home") {
+      url.searchParams.delete("tab");
+    } else {
+      url.searchParams.set("tab", tab);
+    }
+    window.history.replaceState(null, "", url);
+  }
 
   return (
     <div className="app-dashboard">
@@ -923,7 +955,13 @@ function AppDashboard({
           {dashboardNavItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button className={item.active ? "active" : ""} key={item.label}>
+              <button
+                aria-disabled={!item.tab}
+                className={item.tab === activeTab ? "active" : ""}
+                key={item.label}
+                onClick={() => selectTab(item.tab)}
+                type="button"
+              >
                 <Icon size={24} />
                 <span>{item.label}</span>
               </button>
@@ -943,7 +981,7 @@ function AppDashboard({
           </div>
           <strong>프리미엄 멤버십</strong>
           <p>더 많은 분석과 인사이트를 경험해보세요.</p>
-          <button>
+          <button onClick={() => selectTab("report")} type="button">
             업그레이드하기
             <ChevronRight size={18} />
           </button>
@@ -953,8 +991,8 @@ function AppDashboard({
       <section className="app-main">
         <div className="app-topbar">
           <div>
-            <h1>같은 계열 내 내 위치</h1>
-            <p>나와 비슷한 사용자 그룹 내 상대적 위치를 확인해보세요.</p>
+            <h1>{tabHeading.title}</h1>
+            <p>{tabHeading.description}</p>
           </div>
           <div className="app-user-tools">
             <button aria-label="알림">
@@ -977,6 +1015,8 @@ function AppDashboard({
           </div>
         </div>
 
+        {activeTab === "home" && (
+          <>
         <section className="distribution-card">
           <Image
             className="distribution-art"
@@ -1053,54 +1093,716 @@ function AppDashboard({
         <section className="similar-users">
           <div className="section-heading-row">
             <h2>나와 비슷한 사용자</h2>
-            <button>
+            <button onClick={() => selectTab("networking")} type="button">
               더보기
               <ChevronRight size={18} />
             </button>
           </div>
-          <div className="similar-user-grid">
-            {peers.map((peer, index) => (
-              <article className="similar-user-card" key={peer.id}>
-                <Image
-                  className="peer-avatar"
-                  src={`/assets/avatar-peer-${index + 1}.webp`}
-                  alt=""
-                  width={62}
-                  height={62}
-                  unoptimized
-                />
-                <h3>{peer.name}</h3>
-                <p>{peer.schoolHidden}</p>
-                <div className="peer-chip-row">
-                  {peer.tags.slice(0, 3).map((tag) => (
-                    <span key={tag}>{tag}</span>
+          <div className="similar-user-marquee" aria-label="나와 비슷한 사용자 목록">
+            <div className="similar-user-track">
+              {[0, 1].map((groupIndex) => (
+                <div
+                  className="similar-user-group"
+                  aria-hidden={groupIndex === 1}
+                  key={groupIndex}
+                >
+                  {peers.map((peer, index) => (
+                    <article className="similar-user-card" key={`${peer.id}-${groupIndex}`}>
+                      <Image
+                        className="peer-avatar"
+                        src={`/assets/avatar-peer-${index + 1}.webp`}
+                        alt=""
+                        width={62}
+                        height={62}
+                        unoptimized
+                      />
+                      <h3>{peer.name}</h3>
+                      <p>{peer.schoolHidden}</p>
+                      <div className="peer-chip-row">
+                        {peer.tags.slice(0, 3).map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </div>
+                      <footer>
+                        <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
+                        <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
+                      </footer>
+                      <button className="letter-button">
+                        <MessageSquareText size={16} />
+                        편지 보내기
+                      </button>
+                    </article>
                   ))}
                 </div>
-                <footer>
-                  <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
-                  <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
-                </footer>
-                <button className="letter-button">
-                  <MessageSquareText size={16} />
-                  편지 보내기
-                </button>
-              </article>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
+          </>
+        )}
+
+        {activeTab === "report" && (
+          <DashboardReportPage insight={insight} onUnlock={() => setShowPaymentDemo(true)} />
+        )}
+        {activeTab === "networking" && <NetworkingPage peers={peers} />}
+        {activeTab === "profile" && <ProfilePage />}
+        {activeTab === "settings" && <SettingsPage />}
+
+        {showPaymentDemo && (
+          <div className="demo-payment-toast" role="status">
+            <strong>데모 결제 화면입니다</strong>
+            <span>실제 결제 없이 4,900원 심화 리포트 해제 흐름을 시연합니다.</span>
+            <button onClick={() => setShowPaymentDemo(false)} type="button">
+              확인
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
+function DashboardReportPage({
+  insight,
+  onUnlock,
+}: {
+  insight: Insight;
+  onUnlock: () => void;
+}) {
+  return (
+    <section className="dashboard-report-page">
+      <article className="report-free-card">
+        <div className="report-free-header">
+          <span>
+            <BarChart3 size={22} />
+          </span>
+          <div>
+            <p className="eyebrow">기본 리포트</p>
+            <h2>무료로 제공되는 핵심 분석</h2>
+            <p>{insight.summary}</p>
+          </div>
+          <strong>무료</strong>
+        </div>
+
+        <div className="report-free-grid">
+          <div className="report-score-tile">
+            <small>커리큘럼 종합 점수</small>
+            <strong>{insight.analysis.totalScore.toFixed(1)}</strong>
+            <span>비교군 대비 +{insight.analysis.delta}%</span>
+          </div>
+          {insight.analysis.strengths.slice(0, 3).map((strength) => (
+            <div className="report-signal-tile" key={strength}>
+              <CheckCircle2 size={18} />
+              <p>{strength}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <section className="report-insight-grid">
+        <article className="report-section-card">
+          <div className="section-title">
+            <BookOpen size={22} />
+            <h3>커리큘럼 해석</h3>
+          </div>
+          <div className="report-list">
+            {insight.curriculum.map((item) => (
+              <div key={item.name}>
+                <strong>{item.name}</strong>
+                <p>{item.strength}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="report-section-card">
+          <div className="section-title">
+            <Trophy size={22} />
+            <h3>추천 활동</h3>
+          </div>
+          <div className="report-list">
+            {insight.activities.map((activity) => (
+              <div key={activity.title}>
+                <strong>{activity.title}</strong>
+                <p>{activity.why}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <DeepReportPreview onUnlock={onUnlock} />
+    </section>
+  );
+}
+
+function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
+  return (
+    <section className="compare-preview-page">
+      <div className="compare-hero-copy">
+        <span>
+          <LockKeyhole size={16} />
+          심화 리포트 · 4,900원
+        </span>
+        <h2>비교 보기는 심화 리포트에 포함돼요</h2>
+        <p>
+          내 분석 결과와 다른 학생의 데이터를 비교해 강점과 성장 가능성을 더 명확히
+          볼 수 있습니다.
+        </p>
+      </div>
+
+      <div className="compare-preview-grid">
+        <article className="compare-card mine">
+          <div className="compare-card-title">
+            <span>
+              <User size={24} />
+            </span>
+            <h3>내 분석 결과</h3>
+            <em>내 데이터</em>
+          </div>
+          <MiniBarChart />
+          <div className="compare-lower-grid">
+            <div>
+              <h4>역량 레이더 차트</h4>
+              <MiniRadar />
+            </div>
+            <div className="summary-metrics">
+              <h4>요약 지표</h4>
+              {compareSummary.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label}>
+                    <Icon size={20} />
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="compare-tip">
+            <Lightbulb size={18} />
+            AI 역량과 창의적 사고가 강점이에요. 데이터 분석 역량을 더 발전시켜 보세요!
+          </div>
+        </article>
+
+        <article className="compare-card locked">
+          <div className="locked-preview-content">
+            <div className="compare-card-title">
+              <span>
+                <User size={24} />
+              </span>
+              <h3>다른 학생의 분석 결과</h3>
+              <em>비교 대상</em>
+            </div>
+            <MiniBarChart muted />
+            <div className="compare-lower-grid">
+              <MiniRadar />
+              <div className="summary-metrics ghost">
+                {compareSummary.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="compare-lock-overlay">
+            <div>
+              <LockKeyhole size={42} />
+            </div>
+            <h3>심화 리포트 결제 후 확인</h3>
+            <p>비교 보기, 학교별 활동 조합, 포트폴리오 보완 우선순위가 함께 열립니다.</p>
+            <button onClick={onUnlock} type="button">
+              심화 리포트 잠금 해제하기 · 4,900원
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <p className="compare-privacy-note">
+        <ShieldCheck size={17} />
+        모든 데이터는 익명으로 처리되며, 개인정보는 안전하게 보호됩니다.
+      </p>
+    </section>
+  );
+}
+
+function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
+  const [sentPeerId, setSentPeerId] = useState<string | null>(null);
+  const featuredPeers = peers.map((peer, index) => ({
+    ...peer,
+    matchScore: [92, 88, 84, 81, 78][index] || 76,
+    intent: ["해커톤 팀빌딩", "공모전 동료", "포트폴리오 피드백", "사이드프로젝트", "커피챗"][index] || "협업",
+    note: [
+      "백엔드와 API 관심사가 겹치고 인턴 준비 단계가 비슷합니다.",
+      "AI/해커톤/공모전 태그가 함께 잡혀 팀 구성 가능성이 높습니다.",
+      "알고리즘과 시스템 역량을 서로 보완할 수 있습니다.",
+      "데이터 분석 경험을 같이 확장하기 좋은 프로필입니다.",
+      "서비스 기획과 백엔드 협업 목표가 맞물립니다.",
+    ][index] || "관심 분야와 활동 목표가 가깝습니다.",
+  }));
+
+  return (
+    <section className="networking-page">
+      <div className="networking-toolbar">
+        {["전체", "해커톤", "공모전", "포트폴리오 피드백", "사이드프로젝트"].map(
+          (filter, index) => (
+            <button className={index === 0 ? "active" : ""} key={filter} type="button">
+              {filter}
+            </button>
+          ),
+        )}
+      </div>
+
+      <div className="networking-layout">
+        <div className="networking-main">
+          <section className="networking-hero-card">
+            <div>
+              <p className="eyebrow">커리어 동료 추천</p>
+              <h2>함께 성장할 가능성이 높은 사용자</h2>
+              <p>
+                전공, 활동 이력, 관심 태그를 기준으로 지금 연락하기 좋은 동료를 우선 추천합니다.
+              </p>
+            </div>
+            <div className="networking-hero-stats">
+              <strong>5명</strong>
+              <span>오늘 추천</span>
+            </div>
+          </section>
+
+          <div className="networking-grid">
+            {featuredPeers.map((peer, index) => (
+              <article className="networking-card" key={peer.id}>
+                <header>
+                  <Image
+                    src={`/assets/avatar-peer-${index + 1}.webp`}
+                    alt=""
+                    width={58}
+                    height={58}
+                    unoptimized
+                  />
+                  <div>
+                    <h3>{peer.name}</h3>
+                    <p>{peer.schoolHidden}</p>
+                  </div>
+                  <strong>{peer.matchScore}%</strong>
+                </header>
+                <div className="networking-intent">
+                  <Target size={16} />
+                  {peer.intent}
+                </div>
+                <p>{peer.note}</p>
+                <div className="networking-tags">
+                  {peer.tags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+                <footer>
+                  <button type="button">프로필 보기</button>
+                  <button
+                    className={sentPeerId === peer.id ? "sent" : ""}
+                    onClick={() => setSentPeerId(peer.id)}
+                    type="button"
+                  >
+                    <MessageSquareText size={16} />
+                    {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
+                  </button>
+                </footer>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <aside className="networking-side">
+          <section className="networking-request-card">
+            <div className="section-title">
+              <Bell size={20} />
+              <h3>요청함</h3>
+            </div>
+            {networkRequests.map((request) => (
+              <div className="network-request" key={request.name}>
+                <strong>{request.name}</strong>
+                <p>{request.message}</p>
+                <div>
+                  <button type="button">수락</button>
+                  <button type="button">나중에</button>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section className="networking-template-card">
+            <div className="section-title">
+              <Lightbulb size={20} />
+              <h3>추천 편지</h3>
+            </div>
+            <p>
+              “같은 백엔드 관심사라 연락드려요. 이번 해커톤에서 API 설계와 배포를 같이
+              맡아볼 동료를 찾고 있습니다.”
+            </p>
+            <button type="button">
+              <Send size={16} />
+              템플릿으로 시작
+            </button>
+          </section>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function SettingsPage() {
+  return (
+    <section className="settings-page">
+      <article className="settings-card">
+        <div className="section-title">
+          <ShieldCheck size={22} />
+          <h3>공개 범위</h3>
+        </div>
+        {["학교명은 익명 처리", "포트폴리오 미리보기만 공개", "수락 후 연락처 공개"].map(
+          (item) => (
+            <label className="settings-row" key={item}>
+              <span>{item}</span>
+              <input defaultChecked type="checkbox" />
+            </label>
+          ),
+        )}
+      </article>
+
+      <article className="settings-card">
+        <div className="section-title">
+          <Bell size={22} />
+          <h3>알림</h3>
+        </div>
+        {["새 편지 도착", "추천 동료 업데이트", "심화 리포트 할인 알림"].map((item, index) => (
+          <label className="settings-row" key={item}>
+            <span>{item}</span>
+            <input defaultChecked={index < 2} type="checkbox" />
+          </label>
+        ))}
+      </article>
+    </section>
+  );
+}
+
+function ProfilePage() {
+  return (
+    <section className="profile-page">
+      <article className="profile-main-card">
+        <Image
+          className="profile-large-avatar"
+          src="/assets/avatar-peer-1.webp"
+          alt=""
+          width={176}
+          height={176}
+          unoptimized
+        />
+        <h2>김O현</h2>
+        <div className="profile-tag-row">
+          {["백엔드 개발자", "데이터 분석", "PM/기획", "문제 해결", "협업 지향", "성장 지향"].map(
+            (tag) => (
+              <span key={tag}>{tag}</span>
+            ),
+          )}
+        </div>
+        <div className="profile-bio">
+          <strong>자기소개</strong>
+          <p>
+            데이터와 기술로 사람들의 일상을 더 편리하게 만드는 서비스를 만들고 싶습니다.
+            사용자 중심의 사고와 빠른 실행, 지속적인 개선을 통해 팀과 함께 의미 있는
+            결과를 만들어내는 개발자가 되겠습니다.
+          </p>
+          <small>97/100</small>
+        </div>
+        <div className="hidden-school-card">
+          <LockKeyhole size={20} />
+          대학교 정보 비공개
+        </div>
+        <button className="profile-primary-button" type="button">
+          <Send size={19} />
+          메시지 보내기
+        </button>
+        <button className="profile-secondary-button" type="button">
+          <Bookmark size={19} />
+          북마크
+        </button>
+      </article>
+
+      <div className="profile-content">
+        <section className="profile-top-grid">
+          <article className="profile-panel skill-panel">
+            <h3>핵심 역량</h3>
+            <CompetencyRadar />
+            <p>5점 만점 기준 (CareerScope AI 분석)</p>
+          </article>
+
+          <article className="profile-panel activity-panel">
+            <div className="panel-title-row">
+              <h3>활동 이력</h3>
+              <Info size={17} />
+            </div>
+            <div className="activity-list">
+              {activityHistory.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div className={`activity-item ${item.tone}`} key={item.label}>
+                    <span>
+                      <Icon size={28} />
+                    </span>
+                    <strong>{item.label}</strong>
+                    <em>{item.count}</em>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        </section>
+
+        <section className="portfolio-area">
+          <div className="section-heading-row">
+            <div className="portfolio-title">
+              <h2>포트폴리오</h2>
+              <span>총 6개</span>
+            </div>
+            <button>
+              전체 보기
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <div className="portfolio-grid">
+            {portfolioItems.map((item) => (
+              <article className={`portfolio-card ${item.locked ? "locked" : ""}`} key={item.title}>
+                <div className="portfolio-image-wrap">
+                  <Image src={item.image} alt="" width={520} height={330} unoptimized />
+                  {item.locked && (
+                    <div className="portfolio-lock">
+                      <LockKeyhole size={24} />
+                      <strong>미리보기가 제한된 포트폴리오입니다.</strong>
+                    </div>
+                  )}
+                </div>
+                <span className="portfolio-category">{item.category}</span>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+                <div className="portfolio-tech-row">
+                  {item.tech.map((tech) => (
+                    <span key={tech}>{tech}</span>
+                  ))}
+                </div>
+                <time>{item.date}</time>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function CompetencyRadar() {
+  const points = [
+    [150, 42],
+    [232, 90],
+    [232, 184],
+    [150, 232],
+    [68, 184],
+    [68, 90],
+  ];
+
+  return (
+    <div className="competency-radar">
+      <svg viewBox="0 0 300 270" aria-label="핵심 역량 레이더 차트">
+        {[0.25, 0.5, 0.75, 1].map((scale) => (
+          <polygon
+            className="radar-grid-line"
+            key={scale}
+            points={points
+              .map(([x, y]) => `${150 + (x - 150) * scale},${137 + (y - 137) * scale}`)
+              .join(" ")}
+          />
+        ))}
+        {points.map(([x, y]) => (
+          <line className="radar-spoke" key={`${x}-${y}`} x1="150" x2={x} y1="137" y2={y} />
+        ))}
+        <polygon className="radar-value" points="150,55 218,96 220,176 150,212 80,174 74,102" />
+        {[
+          ["문제 해결력", "4.6", 150, 20],
+          ["프로그래밍", "4.3", 252, 76],
+          ["데이터 분석", "4.1", 254, 188],
+          ["커뮤니케이션", "4.2", 150, 256],
+          ["기획력", "3.8", 45, 188],
+          ["협업", "4.4", 44, 76],
+        ].map(([label, score, x, y]) => (
+          <text className="radar-text" key={label} x={x} y={y}>
+            <tspan x={x} dy="0">
+              {label}
+            </tspan>
+            <tspan className="radar-score" x={x} dy="17">
+              {score}
+            </tspan>
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function MiniBarChart({ muted = false }: { muted?: boolean }) {
+  return (
+    <div className={`mini-bar-chart ${muted ? "muted" : ""}`}>
+      {compareBars.map((bar) => (
+        <div key={bar.label}>
+          <span>{bar.value}</span>
+          <b style={{ height: `${bar.value * 1.28}px` }} />
+          <small>{bar.label}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MiniRadar() {
+  return (
+    <div className="mini-radar">
+      <svg viewBox="0 0 220 190" aria-label="역량 레이더 차트">
+        <polygon className="mini-radar-grid" points="110,16 192,64 192,132 110,178 28,132 28,64" />
+        <polygon className="mini-radar-grid" points="110,46 166,78 166,118 110,150 54,118 54,78" />
+        <polygon className="mini-radar-value" points="110,58 158,82 148,126 110,142 66,122 74,84" />
+      </svg>
+    </div>
+  );
+}
+
 const dashboardNavItems = [
-  { label: "홈", icon: HomeIcon, active: true },
-  { label: "분석 리포트", icon: BarChart3 },
-  { label: "비교 보기", icon: Scale },
-  { label: "커리큘럼", icon: BookOpen },
-  { label: "네트워킹", icon: Users },
-  { label: "프로필", icon: User },
-  { label: "설정", icon: Settings },
+  { label: "홈", icon: HomeIcon, tab: "home" },
+  { label: "분석 리포트", icon: BarChart3, tab: "report" },
+  { label: "네트워킹", icon: Users, tab: "networking" },
+  { label: "프로필", icon: User, tab: "profile" },
+  { label: "설정", icon: Settings, tab: "settings" },
+] satisfies Array<{
+  label: string;
+  icon: LucideIcon;
+  tab?: DashboardTab;
+}>;
+
+const dashboardTabHeadings: Record<DashboardTab, { title: string; description: string }> = {
+  home: {
+    title: "같은 계열 내 내 위치",
+    description: "나와 비슷한 사용자 그룹 내 상대적 위치를 확인해보세요.",
+  },
+  report: {
+    title: "분석 리포트",
+    description: "기본 리포트는 무료로 보고, 비교 보기는 4,900원 심화 리포트에서 확인하세요.",
+  },
+  networking: {
+    title: "네트워킹",
+    description: "나와 목표가 가까운 동료를 찾고 편지로 협업을 시작해보세요.",
+  },
+  profile: {
+    title: "마이페이지",
+    description: "내 공개 프로필과 포트폴리오를 확인해보세요.",
+  },
+  settings: {
+    title: "설정",
+    description: "프로필 공개 범위와 네트워킹 알림을 관리하세요.",
+  },
+};
+
+function isDashboardTab(tab: string | null): tab is DashboardTab {
+  return (
+    tab === "home" ||
+    tab === "report" ||
+    tab === "networking" ||
+    tab === "profile" ||
+    tab === "settings"
+  );
+}
+
+const activityHistory = [
+  { label: "공모전", count: "8회 참여", icon: Trophy, tone: "blue" },
+  { label: "해커톤", count: "5회 참여", icon: Code2, tone: "green" },
+  { label: "교환학생", count: "1회 참여", icon: Globe2, tone: "violet" },
+];
+
+const portfolioItems = [
+  {
+    title: "실시간 공공 데이터 대시보드",
+    description: "공공데이터 API를 활용한 실시간 시각화 대시보드 서비스",
+    category: "개발",
+    date: "2024.03",
+    image: "/assets/portfolio-dashboard.webp",
+    tech: ["Python", "FastAPI", "React"],
+  },
+  {
+    title: "스터디 매칭 플랫폼 '스터디온'",
+    description: "관심사 기반 스터디 매칭 및 일정 관리 서비스",
+    category: "프로젝트",
+    date: "2024.01",
+    image: "/assets/portfolio-matching.webp",
+    tech: ["Next.js", "TypeScript", "Tailwind"],
+  },
+  {
+    title: "AI 기반 이력서 분석 서비스",
+    description: "채용 공고에 맞춘 이력서 분석 및 개선 가이드 제공",
+    category: "개인 프로젝트",
+    date: "2023.11",
+    image: "/assets/portfolio-ai-resume.webp",
+    tech: ["Python", "LangChain", "OpenAI"],
+  },
+  {
+    title: "팀 협업 API 서버",
+    description: "권한 관리와 알림 기능을 포함한 협업 백엔드 API",
+    category: "개발",
+    date: "2023.10",
+    image: "/assets/portfolio-dashboard.webp",
+    tech: ["Node.js", "MongoDB"],
+  },
+  {
+    title: "E-commerce 백엔드 API",
+    description: "소형몰 서비스 백엔드 API 개발",
+    category: "개발",
+    date: "2023.09",
+    image: "/assets/portfolio-matching.webp",
+    tech: ["Spring Boot", "MySQL"],
+    locked: true,
+  },
+  {
+    title: "사용자 행동 분석 리포트",
+    description: "로그 데이터 기반 사용자 행동 분석 및 인사이트 도출",
+    category: "데이터 분석",
+    date: "2023.07",
+    image: "/assets/portfolio-ai-resume.webp",
+    tech: ["Python", "Pandas"],
+    locked: true,
+  },
+];
+
+const compareBars = [
+  { label: "AI 역량", value: 82 },
+  { label: "데이터 분석", value: 74 },
+  { label: "문제 해결력", value: 68 },
+  { label: "창의적 사고", value: 79 },
+  { label: "의사소통", value: 71 },
+];
+
+const compareSummary = [
+  { label: "종합 점수", value: "74 /100", icon: TrendingUp },
+  { label: "상위 백분위", value: "상위 28%", icon: Trophy },
+  { label: "강점 영역", value: "AI 역량", icon: Target },
+  { label: "성장 가능 영역", value: "데이터 분석", icon: BarChart3 },
+];
+
+const networkRequests = [
+  {
+    name: "AI 프로덕트 빌더",
+    message: "이번 주말 해커톤에서 데이터 분석 파트를 같이 해보고 싶대요.",
+  },
+  {
+    name: "서비스 기획형 동료",
+    message: "포트폴리오 피드백을 서로 주고받자는 요청을 보냈어요.",
+  },
 ];
 
 const dashboardStats = [
