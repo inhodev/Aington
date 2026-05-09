@@ -18,8 +18,19 @@ const defaultDemoDepartment = "컴퓨터공학과";
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const memoryProfiles: unknown[] = [];
+
+const configuredWebOrigins = [
+  process.env.WEB_ORIGIN,
+  process.env.WEB_ORIGINS,
+]
+  .filter((value): value is string => Boolean(value))
+  .flatMap((value) => value.split(","))
+  .map((value) => value.trim())
+  .filter(Boolean);
+
 const allowedWebOrigins = new Set([
-  process.env.WEB_ORIGIN || "http://localhost:3000",
+  ...configuredWebOrigins,
+  "https://aington.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ]);
