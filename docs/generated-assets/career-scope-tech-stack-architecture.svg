@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="1460" viewBox="0 0 2048 1460" role="img" aria-labelledby="title desc">
+  <title id="title">과연 Career Scope 기술스택 아키텍처</title>
+  <desc id="desc">Next.js, React, TypeScript, Express, Gemini, Prisma, Neon Postgres, MongoDB, Python 데이터 파이프라인으로 구성된 서비스 아키텍처 다이어그램</desc>
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#102a4f" flood-opacity="0.12"/>
+    </filter>
+    <linearGradient id="engineFill" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#eef6ff"/>
+      <stop offset="100%" stop-color="#f7fbff"/>
+    </linearGradient>
+    <linearGradient id="dbFill" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f5fbff"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="34" markerHeight="34" refX="17" refY="17" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M5,5 L29,17 L5,29 Z" fill="#182f55"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      text { font-family: AppleGothic, Arial, sans-serif; }
+      .label { fill: #747474; font-weight: 700; font-size: 64px; }
+      .smallLabel { fill: #747474; font-weight: 700; font-size: 52px; }
+      .box { fill: #ffffff; stroke: #182f55; stroke-width: 5; }
+      .engine { fill: #eef6ff; stroke: #1189dc; stroke-width: 7; }
+      .dbBox { fill: #ffffff; stroke: #182f55; stroke-width: 5; }
+      .titleText { fill: #202020; font-weight: 800; font-size: 60px; }
+      .techText { fill: #111111; font-weight: 800; font-size: 48px; }
+      .midText { fill: #111111; font-weight: 800; font-size: 43px; }
+      .subText { fill: #111111; font-weight: 700; font-size: 37px; }
+      .tinyText { fill: #333333; font-weight: 700; font-size: 29px; }
+      .mutedText { fill: #606060; font-weight: 700; font-size: 30px; }
+      .line { stroke: #182f55; stroke-width: 5; stroke-linecap: round; fill: none; }
+      .thinLine { stroke: #182f55; stroke-width: 4; stroke-linecap: round; fill: none; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="2048" height="1460"/>
+
+  <text x="104" y="254" class="label">Frontend</text>
+  <text x="104" y="545" class="smallLabel">Backend</text>
+  <text x="104" y="806" class="label">AI Engine</text>
+  <text x="104" y="1085" class="label">Database</text>
+  <text x="104" y="1350" class="smallLabel">Data / Tooling</text>
+
+  <text x="1566" y="72" text-anchor="middle" class="mutedText">과연 Career Scope</text>
+
+  <rect x="489" y="96" width="660" height="262" rx="15" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(612 152)">
+    <text x="135" y="59" class="titleText">NEXT</text>
+    <text x="348" y="59" class="techText">.js</text>
+    <text x="25" y="145" class="subText">Next.js 16 App Router</text>
+    <text x="25" y="196" class="tinyText">웹 랜딩 · 리포트 · 대시보드 · 모임</text>
+  </g>
+
+  <rect x="1285" y="96" width="660" height="262" rx="15" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(1415 139)">
+    <g transform="translate(0 0)">
+      <ellipse cx="72" cy="72" rx="92" ry="31" fill="none" stroke="#61dafb" stroke-width="9" transform="rotate(0 72 72)"/>
+      <ellipse cx="72" cy="72" rx="92" ry="31" fill="none" stroke="#61dafb" stroke-width="9" transform="rotate(60 72 72)"/>
+      <ellipse cx="72" cy="72" rx="92" ry="31" fill="none" stroke="#61dafb" stroke-width="9" transform="rotate(120 72 72)"/>
+      <circle cx="72" cy="72" r="13" fill="#61dafb"/>
+    </g>
+    <text x="185" y="77" class="titleText">React 19</text>
+    <text x="185" y="144" class="subText">TypeScript 5.7</text>
+    <text x="185" y="194" class="tinyText">Global CSS · lucide icons</text>
+  </g>
+
+  <line x1="1149" y1="227" x2="1285" y2="227" stroke="#182f55" stroke-width="6" stroke-linecap="round"/>
+  <line x1="819" y1="358" x2="819" y2="440" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <line x1="1615" y1="358" x2="1615" y2="440" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+
+  <rect x="489" y="440" width="1456" height="190" rx="15" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(548 481)">
+    <g transform="translate(0 1)">
+      <path d="M80 0 L147 39 L147 118 L80 158 L13 118 L13 39 Z" fill="#3c873a"/>
+      <text x="80" y="96" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="54" font-weight="800">N</text>
+    </g>
+    <text x="190" y="66" class="techText">Node.js + Express 5 API</text>
+    <text x="190" y="126" class="subText">CORS · dotenv · REST API</text>
+    <text x="780" y="66" class="techText">Prisma Client</text>
+    <g transform="translate(700 23)">
+      <path d="M21 104 L71 13 C78 0 96 4 100 19 L126 125 C129 137 117 147 106 141 L27 115 C18 112 16 110 21 104 Z" fill="#0c344b"/>
+      <path d="M75 37 L103 120 L43 101 Z" fill="#ffffff" opacity="0.28"/>
+    </g>
+    <text x="780" y="126" class="subText">커리큘럼 유사도 · 회원 프로필 저장</text>
+  </g>
+
+  <line x1="1217" y1="630" x2="1217" y2="694" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+
+  <rect x="486" y="694" width="1460" height="235" rx="17" fill="#eef6ff" stroke="#1189dc" stroke-width="8"/>
+  <g transform="translate(560 744)">
+    <g>
+      <path d="M68 0 L91 47 L138 70 L91 93 L68 140 L45 93 L0 70 L45 47 Z" fill="#8e5cf7"/>
+      <path d="M128 4 L139 27 L162 38 L139 49 L128 72 L117 49 L94 38 L117 27 Z" fill="#48c8ff"/>
+    </g>
+    <text x="205" y="61" class="techText">Google Vertex AI / Gemini</text>
+    <text x="205" y="126" class="subText">gemini-3-flash-preview 심층 리포트</text>
+    <line x1="725" y1="82" x2="850" y2="82" stroke="#182f55" stroke-width="5" stroke-linecap="round"/>
+    <text x="890" y="61" class="techText">Similarity Engine</text>
+    <text x="890" y="126" class="subText">semantic · jaccard · area</text>
+  </g>
+  <text x="1217" y="895" text-anchor="middle" class="tinyText">/api/insights · /api/curriculum-similarity · /api/deep-report</text>
+
+  <line x1="1217" y1="929" x2="1217" y2="987" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <line x1="920" y1="929" x2="753" y2="987" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <line x1="1510" y1="929" x2="1680" y2="987" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+
+  <rect x="510" y="987" width="555" height="214" rx="13" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(586 1028)">
+    <g>
+      <ellipse cx="80" cy="24" rx="62" ry="24" fill="#00e599" opacity="0.95"/>
+      <rect x="18" y="24" width="124" height="78" fill="#00a66a"/>
+      <ellipse cx="80" cy="102" rx="62" ry="24" fill="#087f5b"/>
+      <ellipse cx="80" cy="24" rx="62" ry="24" fill="none" stroke="#054b3d" stroke-width="5"/>
+      <path d="M18 24 V102 M142 24 V102" stroke="#054b3d" stroke-width="5"/>
+      <ellipse cx="80" cy="102" rx="62" ry="24" fill="none" stroke="#054b3d" stroke-width="5"/>
+    </g>
+    <text x="180" y="44" class="techText">Neon Postgres</text>
+    <text x="180" y="101" class="subText">Prisma primary DB</text>
+    <text x="180" y="149" class="tinyText">University · Department · Course</text>
+  </g>
+
+  <rect x="1265" y="987" width="555" height="214" rx="13" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(1330 1025)">
+    <path d="M76 4 C111 43 117 89 87 139 C72 115 54 95 50 69 C46 43 57 20 76 4 Z" fill="#47a248"/>
+    <path d="M77 18 C72 59 75 101 88 139" fill="none" stroke="#195b31" stroke-width="5" stroke-linecap="round"/>
+    <text x="157" y="50" class="techText">MongoDB</text>
+    <text x="157" y="108" class="subText">Mongoose fallback</text>
+    <text x="157" y="157" class="tinyText">memory-demo fallback</text>
+  </g>
+
+  <line x1="788" y1="1201" x2="788" y2="1263" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <line x1="1543" y1="1201" x2="1543" y2="1263" stroke="#182f55" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+
+  <rect x="489" y="1263" width="660" height="145" rx="15" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(556 1294)">
+    <g>
+      <rect x="0" y="10" width="104" height="58" rx="16" fill="#3776ab"/>
+      <rect x="62" y="52" width="104" height="58" rx="16" fill="#ffd43b"/>
+      <circle cx="28" cy="34" r="7" fill="#ffffff"/>
+      <circle cx="138" cy="86" r="7" fill="#654f00"/>
+    </g>
+    <text x="190" y="44" class="midText">Python Data Pipeline</text>
+    <text x="190" y="96" class="tinyText">requests · curl · CSV · Markdown · QA audit</text>
+  </g>
+
+  <rect x="1285" y="1263" width="660" height="145" rx="15" fill="#ffffff" stroke="#182f55" stroke-width="6"/>
+  <g transform="translate(1363 1293)">
+    <rect x="0" y="12" width="84" height="84" rx="9" fill="#3178c6"/>
+    <text x="42" y="70" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="42" font-weight="800">TS</text>
+    <text x="132" y="44" class="midText">npm Workspaces</text>
+    <text x="132" y="96" class="tinyText">tsx · ESLint 9 · TypeScript compiler</text>
+  </g>
+
+  <path d="M1149 1336 H1285" stroke="#182f55" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <text x="1217" y="1238" text-anchor="middle" class="mutedText">10개 대학 · 컴공계열 CSV/문서 데이터셋</text>
+</svg>

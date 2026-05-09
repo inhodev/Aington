@@ -18,6 +18,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
+    "google-auth-library": "^9.15.1",
     "mongoose": "^9.6.2"
   },
   "devDependencies": {

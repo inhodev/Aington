@@ -1,4 +1,5 @@
 import { FunctionDeclarationSchemaType, VertexAI, type ResponseSchema } from "@google-cloud/vertexai";
+import { GoogleAuth } from "google-auth-library";
 
 type DeepReportInput = {
   school: string;
@@ -50,6 +51,9 @@ type GeminiGenerateResponse = {
     message?: string;
   };
 };
+
+const reportSystemInstruction =
+  "You are a Korean career advisor for university students. Generate practical, evidence-grounded premium reports from the provided curriculum and benchmark data. Return JSON only.";
 
 const deepReportSchema: ResponseSchema = {
   type: FunctionDeclarationSchemaType.OBJECT,
@@ -125,18 +129,23 @@ export async function buildGeminiDeepReport(input: DeepReportInput): Promise<Dee
 }
 
 async function buildVertexDeepReport(input: DeepReportInput, project: string): Promise<DeepReport> {
-  const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
-  const model = process.env.VERTEX_GEMINI_MODEL || "gemini-2.0-flash-001";
+  const model = process.env.VERTEX_GEMINI_MODEL || "gemini-3-flash-preview";
+  const location =
+    process.env.GOOGLE_CLOUD_LOCATION || (model.startsWith("gemini-3") ? "global" : "us-central1");
+
+  if (location === "global") {
+    return buildVertexRestDeepReport(input, project, location, model);
+  }
+
   const vertexAI = new VertexAI({ project, location });
   const generativeModel = vertexAI.getGenerativeModel({
     model,
-    systemInstruction:
-      "You are a Korean career advisor for university students. Generate practical, evidence-grounded premium reports from the provided curriculum and benchmark data. Return JSON only.",
+    systemInstruction: reportSystemInstruction,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: deepReportSchema,
       temperature: 0.35,
-      maxOutputTokens: 1400,
+      maxOutputTokens: 4096,
     },
   });
 
@@ -158,7 +167,7 @@ async function buildVertexDeepReport(input: DeepReportInput, project: string): P
       throw new GeminiReportError("Vertex AI Gemini returned an empty report.", 502);
     }
 
-    return normalizeDeepReport(JSON.parse(text) as Record<string, unknown>, `vertex:${model}`);
+    return normalizeDeepReport(parseJsonReport(text), `vertex:${model}`);
   } catch (error) {
     if (error instanceof GeminiReportError) {
       throw error;
@@ -171,6 +180,67 @@ async function buildVertexDeepReport(input: DeepReportInput, project: string): P
   }
 }
 
+async function buildVertexRestDeepReport(
+  input: DeepReportInput,
+  project: string,
+  location: string,
+  model: string,
+): Promise<DeepReport> {
+  const auth = new GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+  });
+  const client = await auth.getClient();
+  const authHeaders = toHeaderRecord(await client.getRequestHeaders());
+  const modelPath = `projects/${project}/locations/${location}/publishers/google/models/${model}`;
+  const response = await fetch(`https://aiplatform.googleapis.com/v1/${modelPath}:generateContent`, {
+    method: "POST",
+    headers: {
+      ...authHeaders,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: reportSystemInstruction }],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildPrompt(input) }],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: deepReportSchema,
+        temperature: 0.35,
+        maxOutputTokens: 4096,
+      },
+    }),
+  });
+
+  const raw = await response.text();
+  let payload: GeminiGenerateResponse;
+  try {
+    payload = JSON.parse(raw) as GeminiGenerateResponse;
+  } catch {
+    throw new GeminiReportError(`Vertex AI returned a non-JSON response: ${raw.slice(0, 120)}`, 502);
+  }
+
+  if (!response.ok) {
+    throw new GeminiReportError(payload.error?.message || "Vertex AI Gemini request failed.", 502);
+  }
+
+  const text = payload.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+
+  if (!text) {
+    throw new GeminiReportError("Vertex AI Gemini returned an empty report.", 502);
+  }
+
+  return normalizeDeepReport(parseJsonReport(text), `vertex:${model}`);
+}
+
 async function buildApiKeyDeepReport(input: DeepReportInput): Promise<DeepReport> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
@@ -180,7 +250,7 @@ async function buildApiKeyDeepReport(input: DeepReportInput): Promise<DeepReport
     );
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
@@ -196,7 +266,7 @@ async function buildApiKeyDeepReport(input: DeepReportInput): Promise<DeepReport
             parts: [
               {
                 text:
-                  "You are a Korean career advisor for university students. Generate practical, evidence-grounded premium reports from the provided curriculum and benchmark data. Return JSON only.",
+                  reportSystemInstruction,
               },
             ],
           },
@@ -209,7 +279,7 @@ async function buildApiKeyDeepReport(input: DeepReportInput): Promise<DeepReport
             response_mime_type: "application/json",
             response_schema: deepReportSchema,
             temperature: 0.35,
-            maxOutputTokens: 1400,
+            maxOutputTokens: 4096,
           },
         }),
       },
@@ -229,7 +299,7 @@ async function buildApiKeyDeepReport(input: DeepReportInput): Promise<DeepReport
       throw new GeminiReportError("Gemini returned an empty report.", 502);
     }
 
-    return normalizeDeepReport(JSON.parse(text) as Record<string, unknown>, model);
+    return normalizeDeepReport(parseJsonReport(text), model);
   } catch (error) {
     if (error instanceof GeminiReportError) {
       throw error;
@@ -326,4 +396,39 @@ function readStringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     : [];
+}
+
+function toHeaderRecord(headers: Headers | Record<string, unknown>): Record<string, string> {
+  if (headers instanceof Headers) {
+    const record: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      record[key] = value;
+    });
+    return record;
+  }
+
+  return Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.join(",") : String(value),
+    ]),
+  );
+}
+
+function parseJsonReport(text: string): Record<string, unknown> {
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
+
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as Record<string, unknown>;
+    }
+    throw new GeminiReportError("Gemini returned malformed JSON.", 502);
+  }
 }
