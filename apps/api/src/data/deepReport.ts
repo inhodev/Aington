@@ -187,6 +187,7 @@ async function buildVertexRestDeepReport(
   model: string,
 ): Promise<DeepReport> {
   const auth = new GoogleAuth({
+    credentials: readGoogleCredentials(),
     scopes: ["https://www.googleapis.com/auth/cloud-platform"],
   });
   const client = await auth.getClient();
@@ -430,5 +431,23 @@ function parseJsonReport(text: string): Record<string, unknown> {
       return JSON.parse(trimmed.slice(start, end + 1)) as Record<string, unknown>;
     }
     throw new GeminiReportError("Gemini returned malformed JSON.", 502);
+  }
+}
+
+function readGoogleCredentials(): Record<string, unknown> | undefined {
+  const raw =
+    process.env.GOOGLE_CREDENTIALS_JSON ||
+    (process.env.GOOGLE_CREDENTIALS_BASE64
+      ? Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, "base64").toString("utf8")
+      : undefined);
+
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    throw new GeminiReportError("Invalid GOOGLE_CREDENTIALS_JSON for Vertex AI.", 500);
   }
 }

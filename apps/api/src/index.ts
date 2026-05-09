@@ -268,8 +268,12 @@ app.get("/api/peers", (_req, res) => {
   res.json(buildInsight().peers);
 });
 
-connectMongo().finally(() => {
-  app.listen(port, () => {
-    console.log(`CareerScope API listening on http://localhost:${port}`);
+export { app };
+
+if (!process.env.VERCEL) {
+  connectMongo().finally(() => {
+    app.listen(port, () => {
+      console.log(`CareerScope API listening on http://localhost:${port}`);
+    });
   });
-});
+}

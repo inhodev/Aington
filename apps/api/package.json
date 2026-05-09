@@ -4,13 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "../../node_modules/.bin/tsx watch src/index.ts",
-    "build": "../../node_modules/.bin/tsc",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
     "start": "node dist/index.js",
-    "typecheck": "../../node_modules/.bin/tsc --noEmit",
-    "prisma:generate": "./node_modules/.bin/prisma generate",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
+    "prisma:generate": "prisma generate",
     "db:push": "./node_modules/.bin/prisma db push",
-    "db:seed": "../../node_modules/.bin/tsx src/scripts/seedCurriculum.ts"
+    "db:seed": "tsx src/scripts/seedCurriculum.ts"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.12.0",
