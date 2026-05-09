@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowRight,
   BarChart3,
   Bell,
   BookOpen,
-  Briefcase,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -16,24 +14,22 @@ import {
   EyeOff,
   Folder,
   Globe2,
-  GraduationCap,
   HomeIcon,
   Info,
   Lightbulb,
   LockKeyhole,
   Mail,
   MessageSquareText,
-  Scale,
+  Send,
   Settings,
   ShieldCheck,
   Tag,
   Target,
-  ThumbsUp,
   Trophy,
   TrendingUp,
-  UploadCloud,
   User,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -136,76 +132,138 @@ type Step =
   | "dashboard";
 
 type DashboardTab = "home" | "report" | "networking" | "profile" | "settings";
-type NetworkFilter = "전체" | "해커톤" | "공모전" | "포트폴리오 피드백" | "사이드프로젝트";
+type MatchingDistance = "similar" | "balanced" | "diverse";
+type PortfolioCategory = "프로젝트" | "논문" | "대회" | "기타";
+type PortfolioEntry = {
+  id: number;
+  category: PortfolioCategory;
+  title: string;
+  description: string;
+};
+type PortfolioStats = Record<PortfolioCategory, number>;
+type ChatMessage = {
+  id: string;
+  from: "me" | "peer";
+  text: string;
+  time: string;
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const LOGIN_STORAGE_KEY = "career-scope-logged-in";
-const fieldChips = [
-  "AI",
-  "개발",
-  "디자인",
-  "마케팅",
-  "창업",
-  "기획",
-  "PM",
-  "데이터",
-  "사이드프로젝트",
-  "취업준비",
+const FIELD_STORAGE_KEY = "career-scope-selected-field";
+const CURRENT_USER_ID = "user-current";
+const schoolOptions = [
+  "인하대학교",
+  "서울대학교",
+  "연세대학교",
+  "고려대학교",
+  "한양대학교",
+  "아주대학교",
+  "인천대학교",
+  "가천대학교",
+  "경기대학교",
+  "용인대학교",
 ];
-
-const networkFilters: NetworkFilter[] = [
-  "전체",
-  "해커톤",
+const majorOptions = [
+  "컴퓨터공학과",
+  "소프트웨어학과",
+  "컴퓨터학과",
+  "컴퓨터과학과",
+  "컴퓨터소프트웨어학부",
+  "인공지능학과",
+  "데이터사이언스학과",
+  "정보보호학과",
+  "전자공학과",
+  "산업공학과",
+];
+const careerFieldOptions = [
+  "백엔드",
+  "프론트엔드",
+  "AI/ML",
+  "데이터분석",
+  "알고리즘",
+  "시스템",
+  "보안",
+  "모바일",
+  "클라우드",
+  "인턴 준비",
   "공모전",
-  "포트폴리오 피드백",
-  "사이드프로젝트",
+  "해커톤",
+  "오픈소스",
+  "창업 지향",
 ];
 
-const networkFilterCopy: Record<
-  NetworkFilter,
-  { eyebrow: string; title: string; description: string; template: string }
-> = {
-  전체: {
-    eyebrow: "커리어 동료 추천",
-    title: "함께 성장할 가능성이 높은 사용자",
-    description:
-      "전공, 활동 이력, 관심 태그를 기준으로 지금 연락하기 좋은 동료를 우선 추천합니다.",
-    template:
-      "“같은 백엔드 관심사라 연락드려요. 이번 해커톤에서 API 설계와 배포를 같이 맡아볼 동료를 찾고 있습니다.”",
-  },
-  해커톤: {
-    eyebrow: "해커톤 팀빌딩",
-    title: "짧은 시간 안에 같이 만들 수 있는 동료",
-    description:
-      "역할이 겹치지 않고 MVP 제작 경험을 함께 쌓기 좋은 사용자를 보여줍니다.",
-    template:
-      "“이번 해커톤에서 API 설계와 배포를 맡을 동료를 찾고 있어요. 관심사가 비슷해서 같이 팀을 해보고 싶습니다.”",
-  },
-  공모전: {
-    eyebrow: "공모전 동료",
-    title: "문제 정의와 제출 경험을 같이 쌓을 동료",
-    description:
-      "AI, 데이터, 서비스 기획 태그를 기준으로 공모전 준비에 맞는 사용자를 추천합니다.",
-    template:
-      "“데이터 분석 공모전을 준비 중인데 역할을 나눠 같이 제출까지 해보고 싶어요. 관심 있으시면 이야기 나눠보고 싶습니다.”",
-  },
-  "포트폴리오 피드백": {
-    eyebrow: "포트폴리오 피드백",
-    title: "서로 결과물을 봐줄 수 있는 사용자",
-    description:
-      "프로젝트 경험과 기술 스택이 가까워 포트폴리오 리뷰를 주고받기 좋은 사용자입니다.",
-    template:
-      "“포트폴리오를 서로 보고 피드백을 주고받고 싶어요. 프로젝트 설명 방식과 기술 선택을 같이 점검해보면 좋겠습니다.”",
-  },
-  사이드프로젝트: {
-    eyebrow: "사이드프로젝트",
-    title: "꾸준히 같이 만들 가능성이 높은 동료",
-    description:
-      "서비스 기획, 백엔드, 데이터 분석처럼 장기 협업 역할이 맞물리는 사용자를 보여줍니다.",
-    template:
-      "“사이드프로젝트로 작게 출시까지 해볼 팀원을 찾고 있어요. 관심 분야가 맞아서 같이 이야기해보고 싶습니다.”",
-  },
+type DummyStudent = {
+  id: string;
+  school: string;
+  major: string;
+  curriculum: string;
+  fields: string[];
 };
+
+const dummyStudents: DummyStudent[] = [
+  { id: "stu-1", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "알고리즘", "데이터분석"] },
+  { id: "stu-2", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "시스템", "인턴 준비"] },
+  { id: "stu-3", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "AI/ML", "오픈소스"] },
+  { id: "stu-4", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "보안", "해커톤"] },
+  { id: "stu-5", school: "연세대학교", major: "컴퓨터과학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "클라우드", "공모전"] },
+  { id: "stu-6", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["백엔드", "시스템", "보안"] },
+  { id: "stu-7", school: "아주대학교", major: "소프트웨어학과", curriculum: "소프트웨어학과", fields: ["프론트엔드", "해커톤", "창업 지향"] },
+  { id: "stu-8", school: "인천대학교", major: "인공지능학과", curriculum: "인공지능학과", fields: ["AI/ML", "데이터분석", "공모전"] },
+  { id: "stu-9", school: "가천대학교", major: "데이터사이언스학과", curriculum: "데이터사이언스학과", fields: ["데이터분석", "AI/ML", "인턴 준비"] },
+  { id: "stu-10", school: "경기대학교", major: "정보보호학과", curriculum: "정보보호학과", fields: ["보안", "시스템", "오픈소스"] },
+  { id: "stu-11", school: "용인대학교", major: "전자공학과", curriculum: "전자공학과", fields: ["모바일", "시스템", "창업 지향"] },
+  { id: "stu-12", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["알고리즘", "백엔드", "공모전"] },
+  { id: "stu-13", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["알고리즘", "백엔드", "오픈소스"] },
+  { id: "stu-14", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["모바일", "백엔드", "클라우드"] },
+];
+
+const curriculumComparisonRows = [
+  { category: "알고리즘/자료구조", mine: 4, other: 3 },
+  { category: "AI/머신러닝", mine: 2, other: 5 },
+  { category: "데이터베이스", mine: 3, other: 3 },
+  { category: "보안/시스템", mine: 1, other: 3 },
+  { category: "프로젝트/실습", mine: 4, other: 3 },
+];
+const networkFilterTags = ["전체", ...careerFieldOptions];
+const portfolioCategoryOptions: PortfolioCategory[] = ["프로젝트", "논문", "대회", "기타"];
+const emptyPortfolioStats: PortfolioStats = {
+  프로젝트: 0,
+  논문: 0,
+  대회: 0,
+  기타: 0,
+};
+const defaultPortfolioStats: PortfolioStats = {
+  프로젝트: 4,
+  논문: 0,
+  대회: 2,
+  기타: 1,
+};
+const matchingDistanceOptions: Array<{
+  value: MatchingDistance;
+  label: string;
+  range: string;
+  description: string;
+}> = [
+  {
+    value: "similar",
+    label: "비슷한 동료 우선",
+    range: "유사도 70% 이상 매칭",
+    description: "비슷한 전공, 비슷한 활동 이력을 가진 동료를 추천합니다",
+  },
+  {
+    value: "balanced",
+    label: "균형있게",
+    range: "유사도 40~70% 매칭",
+    description: "다양한 배경의 동료를 골고루 추천합니다",
+  },
+  {
+    value: "diverse",
+    label: "다른 시각 우선",
+    range: "유사도 40% 이하 매칭",
+    description: "다른 전공, 다른 활동 배경을 가진 동료를 추천합니다",
+  },
+];
 
 const avatarPalette = ["#4F46E5", "#7C3AED", "#10B981", "#F59E0B", "#F43F5E"];
 
@@ -216,7 +274,7 @@ const privacySettings: Array<{ label: string; icon: LucideIcon; checked: boolean
 ];
 
 const notificationSettings: Array<{ label: string; icon: LucideIcon; checked: boolean }> = [
-  { label: "새 편지 도착", icon: Bell, checked: true },
+  { label: "새 메시지 도착", icon: Bell, checked: true },
   { label: "추천 동료 업데이트", icon: Users, checked: true },
   { label: "심화 리포트 할인 알림", icon: Tag, checked: false },
 ];
@@ -375,68 +433,138 @@ export default function Home() {
   const [step, setStep] = useState<Step>("landing");
   const [school, setSchool] = useState("인하대학교");
   const [department, setDepartment] = useState("컴퓨터공학과");
-  const [grade, setGrade] = useState("전체");
+  const [field, setField] = useState("백엔드");
   const [insight, setInsight] = useState<Insight | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profileName, setProfileName] = useState("김하늘");
   const [introLength, setIntroLength] = useState(43);
-  const [interestChips, setInterestChips] = useState(["개발"]);
-  const [meetChips, setMeetChips] = useState(["개발"]);
+  const [signupField, setSignupField] = useState("백엔드");
+  const [matchingDistance, setMatchingDistance] = useState<MatchingDistance>("balanced");
+  const [portfolioEntries, setPortfolioEntries] = useState<PortfolioEntry[]>([
+    { id: 1, category: "프로젝트", title: "", description: "" },
+  ]);
+  const [profilePortfolioStats, setProfilePortfolioStats] =
+    useState<PortfolioStats>(defaultPortfolioStats);
 
   const activeInsight = insight || fallbackInsight;
-  const reportMetrics = useMemo(
-    () => buildReportMetrics(activeInsight.analysis.metrics),
-    [activeInsight.analysis.metrics],
+  const schoolComparison = useMemo(
+    () => buildSchoolMajorComparison(school, department, field),
+    [school, department, field],
   );
-  const radarPoints = useMemo(
-    () => buildRadarPoints(reportMetrics.map((metric) => metric.score)),
-    [reportMetrics],
+  const completedPortfolioEntries = useMemo(
+    () =>
+      portfolioEntries.filter(
+        (entry) => entry.title.trim().length > 0 || entry.description.trim().length > 0,
+      ),
+    [portfolioEntries],
+  );
+  const portfolioStats = useMemo(
+    () => buildPortfolioStats(completedPortfolioEntries),
+    [completedPortfolioEntries],
   );
 
   useEffect(() => {
-    const view = new URLSearchParams(window.location.search).get("view");
-    if (view === "report") {
-      const timer = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get("view");
+      const storedField = window.sessionStorage.getItem(FIELD_STORAGE_KEY);
+      const selectedSchool = params.get("school") || "인하대학교";
+      const selectedMajor = params.get("major") || "컴퓨터공학과";
+      const selectedField = params.get("field") || storedField || "백엔드";
+
+      setSchool(selectedSchool);
+      setDepartment(selectedMajor);
+      setField(selectedField);
+      setSignupField(selectedField);
+      window.sessionStorage.setItem(FIELD_STORAGE_KEY, selectedField);
+
+      if (view === "report") {
         setInsight(fallbackInsight);
         setStep("report");
-      }, 0);
-      return () => window.clearTimeout(timer);
-    }
-    if (view === "signup") {
-      const timer = window.setTimeout(() => setStep("signup"), 0);
-      return () => window.clearTimeout(timer);
-    }
-    if (view === "notice") {
-      const timer = window.setTimeout(() => setStep("signupNotice"), 0);
-      return () => window.clearTimeout(timer);
-    }
-    if (view === "dashboard") {
-      const timer = window.setTimeout(() => {
+        return;
+      }
+      if (view === "signup") {
+        setStep("signup");
+        return;
+      }
+      if (view === "notice") {
+        setStep("signupNotice");
+        return;
+      }
+      if (view === "dashboard") {
         window.localStorage.setItem(LOGIN_STORAGE_KEY, "true");
         setIsLoggedIn(true);
         setInsight(fallbackInsight);
         setStep("dashboard");
-      }, 0);
-      return () => window.clearTimeout(timer);
-    }
+        return;
+      }
 
-    const timer = window.setTimeout(() => {
       setIsLoggedIn(window.localStorage.getItem(LOGIN_STORAGE_KEY) === "true");
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  function selectField(nextField: string) {
+    setField(nextField);
+    setSignupField(nextField);
+    window.sessionStorage.setItem(FIELD_STORAGE_KEY, nextField);
+  }
+
+  function addPortfolioEntry() {
+    if (portfolioEntries.length >= 10) {
+      return;
+    }
+
+    setPortfolioEntries((entries) => [
+      ...entries,
+      {
+        id: Date.now(),
+        category: "프로젝트",
+        title: "",
+        description: "",
+      },
+    ]);
+  }
+
+  function updatePortfolioEntry(
+    id: number,
+    key: keyof Omit<PortfolioEntry, "id">,
+    value: string,
+  ) {
+    setPortfolioEntries((entries) =>
+      entries.map((entry) => (entry.id === id ? { ...entry, [key]: value } : entry)),
+    );
+  }
+
+  function removePortfolioEntry(id: number) {
+    setPortfolioEntries((entries) => {
+      if (entries.length === 1) {
+        return entries;
+      }
+      return entries.filter((entry) => entry.id !== id);
+    });
+  }
 
   async function handleAnalyze() {
     setStep("analyzing");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     const delay = new Promise((resolve) => window.setTimeout(resolve, 4500));
+    const selectedField = field || careerFieldOptions[0];
+    window.sessionStorage.setItem(FIELD_STORAGE_KEY, selectedField);
+    const landingParams = new URLSearchParams({
+      school,
+      major: department,
+      field: selectedField,
+    });
+    window.history.replaceState(null, "", `/?${landingParams.toString()}`);
 
     try {
       const query = new URLSearchParams({
         school,
+        major: department,
         department,
-        ...(grade !== "전체" ? { grade } : {}),
+        field: selectedField,
       }).toString();
       const [response] = await Promise.all([
         fetch(`${API_URL}/api/insights?${query}`),
@@ -467,14 +595,20 @@ export default function Home() {
       department,
       email: "student@inha.edu",
       name: "김하늘",
-      role: String(form.get("role") || ""),
-      interest: interestChips.join(", "),
-      wantsToMeet: meetChips.join(", "),
+      role: String(form.get("role") || signupField),
+      interest: signupField,
+      wantsToMeet: matchingDistance,
       intro: String(form.get("intro") || ""),
-      portfolio: "demo-portfolio-upload.pdf",
+      matchingDistance,
+      portfolioEntries: completedPortfolioEntries,
+      portfolioStats,
+      portfolio: JSON.stringify(completedPortfolioEntries),
     };
 
     setProfileName(payload.name || "김하늘");
+    setProfilePortfolioStats(portfolioStats);
+    window.sessionStorage.setItem(FIELD_STORAGE_KEY, payload.role);
+    window.sessionStorage.setItem("career-scope-signup", JSON.stringify(payload));
 
     try {
       await fetch(`${API_URL}/api/signup`, {
@@ -489,23 +623,6 @@ export default function Home() {
     completeLogin();
   }
 
-  function toggleChip(kind: "interest" | "meet", chip: string) {
-    const [values, setValues] =
-      kind === "interest"
-        ? [interestChips, setInterestChips]
-        : [meetChips, setMeetChips];
-
-    if (values.includes(chip)) {
-      if (values.length === 1) {
-        return;
-      }
-      setValues(values.filter((value) => value !== chip));
-      return;
-    }
-
-    setValues([...values, chip]);
-  }
-
   function continueToSignup() {
     setStep("signup");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -515,6 +632,18 @@ export default function Home() {
     window.localStorage.setItem(LOGIN_STORAGE_KEY, "true");
     setIsLoggedIn(true);
     setStep("dashboard");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function logout() {
+    window.localStorage.removeItem(LOGIN_STORAGE_KEY);
+    window.localStorage.removeItem("career-scope-token");
+    window.localStorage.removeItem("token");
+    window.localStorage.removeItem("authToken");
+    window.sessionStorage.clear();
+    window.history.replaceState(null, "", "/");
+    setIsLoggedIn(false);
+    setStep("landing");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -537,11 +666,9 @@ export default function Home() {
     <main>
       {step !== "dashboard" && (
         <Header
-          active={step}
           isLoggedIn={isLoggedIn}
           onHome={goHome}
           onLogin={completeLogin}
-          onSignup={continueToSignup}
         />
       )}
 
@@ -566,18 +693,7 @@ export default function Home() {
               label="학교"
               placeholder="학교를 선택하세요"
               value={school}
-              options={[
-                "인하대학교",
-                "서울대학교",
-                "연세대학교",
-                "고려대학교",
-                "한양대학교",
-                "아주대학교",
-                "인천대학교",
-                "가천대학교",
-                "경기대학교",
-                "용인대학교",
-              ]}
+              options={schoolOptions}
               popularOptions={["인하대학교", "서울대학교", "연세대학교"]}
               onChange={setSchool}
             />
@@ -587,22 +703,21 @@ export default function Home() {
               label="학과"
               placeholder="학과를 선택하세요"
               value={department}
-              options={["컴퓨터공학과"]}
-              popularOptions={["컴퓨터공학과"]}
-              onChange={setDepartment}
+              options={majorOptions}
+              popularOptions={["컴퓨터공학과", "소프트웨어학과", "인공지능학과"]}
+              onChange={(nextDepartment) => {
+                setDepartment(nextDepartment);
+                if (!field) {
+                  selectField(careerFieldOptions[0]);
+                }
+              }}
             />
 
-            <CustomDropdown
-              icon="📅"
-              label="범위"
-              placeholder="분석 범위를 선택하세요"
-              value={grade}
-              options={["전체", "1학년", "2학년", "3학년", "4학년"]}
-              popularOptions={["전체", "3학년", "4학년"]}
-              onChange={(nextGrade) => {
-                setGrade(nextGrade === "전체" ? "전체" : nextGrade.replace("학년", ""));
-              }}
-              displayValue={grade === "전체" ? "전체" : `${grade}학년`}
+            <FieldChipDropdown
+              value={field}
+              disabled={!department}
+              options={careerFieldOptions}
+              onChange={selectField}
             />
 
             <button className="primary-cta" onClick={handleAnalyze}>
@@ -666,9 +781,9 @@ export default function Home() {
                 <div className="university-seal">仁</div>
                 <div>
                   <h1 className="report-title">
-                    {activeInsight.target.school}
+                    {school}
                     <span className="report-department-pill">
-                      {activeInsight.target.department}
+                      {department}
                     </span>
                   </h1>
                   <p>{activeInsight.summary}</p>
@@ -681,116 +796,42 @@ export default function Home() {
             </div>
 
             <div className="report-meta-row">
-              <ReportMeta
-                icon={<BookOpen size={18} />}
-                label="분석 기준"
-                value="Neon 커리큘럼 DB"
-              />
-              <ReportMeta
-                icon={<CalendarDays size={18} />}
-                label="분석 일자"
-                value="2026.05.09"
-              />
-              <ReportMeta
-                icon={<Users size={18} />}
-                label="비교 대상"
-                value="10개 대학 커리큘럼"
-              />
+              <div className="report-meta">
+                <span>
+                  <BookOpen size={18} />
+                </span>
+                <div>
+                  <small>분석 기준</small>
+                  <strong>Neon 커리큘럼 DB</strong>
+                </div>
+              </div>
+              <div className="report-meta">
+                <span>
+                  <CalendarDays size={18} />
+                </span>
+                <div>
+                  <small>분석 일자</small>
+                  <strong>2026.05.09</strong>
+                </div>
+              </div>
+              <div className="report-meta">
+                <span>
+                  <Users size={18} />
+                </span>
+                <div>
+                  <small>비교 대상</small>
+                  <strong>10개 대학 커리큘럼</strong>
+                </div>
+              </div>
             </div>
 
-            <div className="report-stage">
-              <section className="score-card">
-                <div className="score-title">
-                  <strong>커리큘럼 종합 점수</strong>
-                  <Info size={16} />
-                </div>
-                <div className="score-value">
-                  {activeInsight.analysis.totalScore.toFixed(1)} <span>/ 100</span>
-                </div>
-                <div className="score-bar">
-                  <div style={{ width: `${activeInsight.analysis.totalScore}%` }} />
-                </div>
-                <p>
-                  비교군 기준 대비{" "}
-                  <span>
-                    {activeInsight.analysis.delta >= 0 ? "▲" : "▼"}{" "}
-                    {Math.abs(activeInsight.analysis.delta).toFixed(1)}
-                  </span>
-                </p>
-              </section>
-
-              <section className="radar-panel" aria-label="전공 역량 레이더 차트">
-                <div className="radar-chart">
-                  <svg viewBox="0 0 320 320" role="img" aria-label="전공 역량 점수">
-                    <polygon
-                      className="radar-grid"
-                      points="160,24 289,98 289,222 160,296 31,222 31,98"
-                    />
-                    <polygon
-                      className="radar-grid"
-                      points="160,60 258,116 258,204 160,260 62,204 62,116"
-                    />
-                    <polygon
-                      className="radar-grid"
-                      points="160,96 227,135 227,185 160,224 93,185 93,135"
-                    />
-                    <line x1="160" y1="160" x2="160" y2="24" />
-                    <line x1="160" y1="160" x2="289" y2="98" />
-                    <line x1="160" y1="160" x2="289" y2="222" />
-                    <line x1="160" y1="160" x2="160" y2="296" />
-                    <line x1="160" y1="160" x2="31" y2="222" />
-                    <line x1="160" y1="160" x2="31" y2="98" />
-                    <polygon className="radar-fill" points={radarPoints} />
-                    <polygon className="radar-line" points={radarPoints} />
-                    {reportMetrics.map((metric, index) => {
-                      const [x, y] = getRadarPoint(metric.score, index);
-                      return (
-                        <circle
-                          className="radar-dot"
-                          cx={x}
-                          cy={y}
-                          key={metric.label}
-                          r="5"
-                        />
-                      );
-                    })}
-                  </svg>
-                  {reportMetrics.map((metric) => (
-                    <div className={`radar-label ${metric.position}`} key={metric.label}>
-                      <strong>{metric.label}</strong>
-                      <span>{metric.score}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="score-list-card">
-                {reportMetrics.map((metric) => (
-                  <ScoreRow key={metric.label} metric={metric} />
-                ))}
-                <p>각 항목은 선택 학과와 비교 대학 커리큘럼의 과목, 분야, 학기 구조를 기준으로 산출되었습니다.</p>
-              </section>
-            </div>
-
-            <ReportNotice
-              tone="good"
-              icon={<ThumbsUp size={34} />}
-              title="장점"
-              subtitle="강점을 잘 활용하고 더 발전시켜 보세요!"
-              items={activeInsight.analysis.strengths}
+            <FieldComparisonReport
+              school={school}
+              major={department}
+              field={field}
+              schoolComparison={schoolComparison}
+              onDeepDive={openCompareFlow}
             />
-
-            <ReportNotice
-              tone="bad"
-              icon={<AlertCircle size={34} />}
-              title="단점"
-              subtitle="아쉬운 부분을 보완하여 경쟁력을 높여보세요!"
-              items={activeInsight.analysis.weaknesses}
-            />
-
-            <InsightEvidencePanel insight={activeInsight} />
-
-            <CurriculumRankingPanel similarity={activeInsight.curriculumSimilarity} />
 
             <section className="locked-report result-lock">
               <div>
@@ -843,7 +884,7 @@ export default function Home() {
         <section className="onboarding-shell">
           <div className="onboarding-steps" aria-label="회원가입 온보딩 단계">
             <OnboardingStep active step="1" label="STEP 1" title="기본 정보" />
-            <OnboardingStep step="2" label="STEP 2" title="관심 분야 및 매칭" />
+            <OnboardingStep step="2" label="STEP 2" title="동료 매칭" />
             <OnboardingStep step="3" label="STEP 3" title="포트폴리오 등록" />
           </div>
 
@@ -874,13 +915,20 @@ export default function Home() {
               </label>
               <label className="role-field">
                 <span>
-                  직군 <em>*</em>
+                  직군/분야 <em>*</em>
                 </span>
-                <select name="role" defaultValue="백엔드 개발자" required>
-                  <option>백엔드 개발자</option>
-                  <option>AI 엔지니어</option>
-                  <option>프론트엔드 개발자</option>
-                  <option>데이터 분석가</option>
+                <select
+                  name="role"
+                  value={signupField}
+                  onChange={(event) => {
+                    setSignupField(event.target.value);
+                    window.sessionStorage.setItem(FIELD_STORAGE_KEY, event.target.value);
+                  }}
+                  required
+                >
+                  {careerFieldOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
                 </select>
                 <ChevronDown className="select-icon" size={20} />
               </label>
@@ -889,18 +937,12 @@ export default function Home() {
             <section className="onboarding-section match-section">
               <SectionNumber number="2" />
               <div className="section-copy">
-                <h3>관심 분야 및 매칭</h3>
-                <p>관심 있는 분야와 만나고 싶은 사람을 선택해주세요.</p>
+                <h3>어떤 동료를 만나고 싶으신가요?</h3>
+                <p>추천 동료의 유사도 거리를 선택해주세요.</p>
               </div>
-              <ChipGroup
-                label="원하는 분야"
-                selected={interestChips}
-                onToggle={(chip) => toggleChip("interest", chip)}
-              />
-              <ChipGroup
-                label="만나고 싶은 사람"
-                selected={meetChips}
-                onToggle={(chip) => toggleChip("meet", chip)}
+              <MatchingDistanceSlider
+                value={matchingDistance}
+                onChange={setMatchingDistance}
               />
             </section>
 
@@ -908,17 +950,22 @@ export default function Home() {
               <SectionNumber number="3" />
               <div className="section-copy">
                 <h3>포트폴리오 등록 <span>(선택)</span></h3>
-                <p>포트폴리오를 등록하면 더 좋은 기회를 만날 수 있어요.</p>
+                <p>
+                  등록한 활동은 프로필 활동 이력으로 자동 집계됩니다.
+                  포트폴리오를 등록하면 더 좋은 기회를 만날 수 있어요.
+                </p>
                 <div className="match-boost">
                   <SparkIcon />
                   포트폴리오 등록 시 매칭률 <strong>+40%</strong>
                 </div>
               </div>
-              <button className="upload-zone" type="button">
-                <UploadCloud size={42} />
-                <strong>파일을 드래그하거나 클릭하여 업로드</strong>
-                <span>PDF, PPT, DOC, ZIP 파일 지원 (최대 20MB)</span>
-              </button>
+              <PortfolioEntryEditor
+                entries={portfolioEntries}
+                stats={portfolioStats}
+                onAdd={addPortfolioEntry}
+                onRemove={removePortfolioEntry}
+                onUpdate={updatePortfolioEntry}
+              />
             </section>
           </form>
 
@@ -934,6 +981,8 @@ export default function Home() {
         <AppDashboard
           insight={activeInsight}
           profileName={profileName}
+          portfolioStats={profilePortfolioStats}
+          onLogout={logout}
         />
       )}
     </main>
@@ -941,17 +990,13 @@ export default function Home() {
 }
 
 function Header({
-  active,
   isLoggedIn,
   onHome,
   onLogin,
-  onSignup,
 }: {
-  active: Step;
   isLoggedIn: boolean;
   onHome: () => void;
   onLogin: () => void;
-  onSignup: () => void;
 }) {
   return (
     <header className="site-header">
@@ -972,12 +1017,6 @@ function Header({
         </span>
       </button>
       <nav>
-        <a>서비스 소개</a>
-        <a className={active === "report" || active === "analyzing" ? "active" : ""}>
-          분석 리포트
-        </a>
-        <a>진로 가이드</a>
-        <a>데이터 인사이트</a>
         {isLoggedIn ? (
           <>
             <button className="icon-nav-button" aria-label="알림">
@@ -992,11 +1031,7 @@ function Header({
             로그인
           </button>
         )}
-        {isLoggedIn ? (
-          <button onClick={onHome}>메인</button>
-        ) : (
-          <button onClick={onSignup}>회원가입</button>
-        )}
+        <button onClick={onHome}>메인</button>
       </nav>
     </header>
   );
@@ -1005,9 +1040,13 @@ function Header({
 function AppDashboard({
   insight,
   profileName,
+  portfolioStats,
+  onLogout,
 }: {
   insight: Insight;
   profileName: string;
+  portfolioStats: PortfolioStats;
+  onLogout: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
     if (typeof window === "undefined") {
@@ -1019,6 +1058,18 @@ function AppDashboard({
   });
   const [showPaymentDemo, setShowPaymentDemo] = useState(false);
   const [showOperatorNotice, setShowOperatorNotice] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [activeMessagePeer, setActiveMessagePeer] = useState<Insight["peers"][number] | null>(
+    null,
+  );
+  const [messageDraft, setMessageDraft] = useState("");
+  const [messageThreads, setMessageThreads] = useState<Record<string, ChatMessage[]>>({});
+  const [profileUserId, setProfileUserId] = useState(() => {
+    if (typeof window === "undefined") {
+      return CURRENT_USER_ID;
+    }
+    return new URLSearchParams(window.location.search).get("profileUserId") || CURRENT_USER_ID;
+  });
   const peers = [...insight.peers, ...dashboardExtraPeers].slice(0, 5);
   const tabHeading = dashboardTabHeadings[activeTab];
 
@@ -1035,6 +1086,84 @@ function AppDashboard({
     } else {
       url.searchParams.set("tab", tab);
     }
+    if (tab === "profile") {
+      setProfileUserId(CURRENT_USER_ID);
+      url.searchParams.delete("profileUserId");
+    }
+    window.history.replaceState(null, "", url);
+  }
+
+  function openMessage(peer: Insight["peers"][number]) {
+    setActiveMessagePeer(peer);
+    setMessageDraft("");
+    setMessageThreads((threads) => {
+      if (threads[peer.id]) {
+        return threads;
+      }
+
+      const interest = peer.tags[0] || "관심 분야";
+      return {
+        ...threads,
+        [peer.id]: [
+          {
+            id: `${peer.id}-peer-welcome`,
+            from: "peer",
+            text: `안녕하세요! ${interest} 쪽으로 같이 이야기 나눠보고 싶어요.`,
+            time: "방금 전",
+          },
+          {
+            id: `${peer.id}-me-welcome`,
+            from: "me",
+            text: "좋아요. 어떤 활동을 같이 준비하고 있나요?",
+            time: "방금 전",
+          },
+        ],
+      };
+    });
+  }
+
+  function sendMessage() {
+    if (!activeMessagePeer) {
+      return;
+    }
+
+    const text = messageDraft.trim();
+    if (!text) {
+      return;
+    }
+
+    const peer = activeMessagePeer;
+    const interest = peer.tags[0] || "관심 분야";
+    const time = formatChatTime();
+
+    setMessageThreads((threads) => ({
+      ...threads,
+      [peer.id]: [
+        ...(threads[peer.id] || []),
+        {
+          id: `${peer.id}-me-${Date.now()}`,
+          from: "me",
+          text,
+          time,
+        },
+        {
+          id: `${peer.id}-peer-${Date.now()}`,
+          from: "peer",
+          text: `${interest} 얘기부터 맞춰보면 좋겠어요. 이번 주 가능한 시간 알려주세요.`,
+          time,
+        },
+      ],
+    }));
+    setMessageDraft("");
+  }
+
+  function viewPeerProfile(peerId: string) {
+    setProfileUserId(peerId);
+    setActiveTab("profile");
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", "dashboard");
+    url.searchParams.set("tab", "profile");
+    url.searchParams.set("profileUserId", peerId);
     window.history.replaceState(null, "", url);
   }
 
@@ -1060,10 +1189,16 @@ function AppDashboard({
             const Icon = item.icon;
             return (
               <button
-                aria-disabled={!item.tab}
+                aria-disabled={!item.tab && !item.href}
                 className={item.tab === activeTab ? "active" : ""}
                 key={item.label}
-                onClick={() => selectTab(item.tab)}
+                onClick={() => {
+                  if (item.href) {
+                    window.location.href = item.href;
+                    return;
+                  }
+                  selectTab(item.tab);
+                }}
                 type="button"
               >
                 <Icon size={24} />
@@ -1072,24 +1207,6 @@ function AppDashboard({
             );
           })}
         </nav>
-
-        <div className="premium-card">
-          <div className="premium-icon">
-            <Image
-              src="/assets/stat-certificate.webp"
-              alt=""
-              width={52}
-              height={52}
-              unoptimized
-            />
-          </div>
-          <strong>프리미엄 멤버십</strong>
-          <p>더 많은 분석과 인사이트를 경험해보세요.</p>
-          <button onClick={() => selectTab("report")} type="button">
-            업그레이드하기
-            <ChevronRight size={18} />
-          </button>
-        </div>
       </aside>
 
       <section className="app-main">
@@ -1125,7 +1242,13 @@ function AppDashboard({
                 </div>
               )}
             </div>
-            <div className="app-profile">
+            <div className="app-profile-shell">
+              <button
+                className="app-profile"
+                type="button"
+                aria-expanded={showUserMenu}
+                onClick={() => setShowUserMenu((isOpen) => !isOpen)}
+              >
               <span
                 className="avatar initial-avatar"
                 style={{ "--avatar-color": "#4F46E5" } as React.CSSProperties}
@@ -1135,6 +1258,19 @@ function AppDashboard({
               </span>
               <strong>{profileName}</strong>
               <ChevronDown size={18} />
+              </button>
+              {showUserMenu && (
+                <div className="user-menu" role="menu">
+                  <button
+                    className="logout-menu-item"
+                    type="button"
+                    role="menuitem"
+                    onClick={onLogout}
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1271,9 +1407,13 @@ function AppDashboard({
                           <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
                           <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
                         </footer>
-                        <button className="letter-button">
+                        <button
+                          className="letter-button"
+                          onClick={() => openMessage(peer)}
+                          type="button"
+                        >
                           <MessageSquareText size={16} />
-                          편지 보내기
+                          메시지 보내기
                         </button>
                       </article>
                     );
@@ -1289,8 +1429,23 @@ function AppDashboard({
         {activeTab === "report" && (
           <DashboardReportPage insight={insight} onUnlock={() => setShowPaymentDemo(true)} />
         )}
-        {activeTab === "networking" && <NetworkingPage peers={peers} />}
-        {activeTab === "profile" && <ProfilePage />}
+        {activeTab === "networking" && (
+          <NetworkingPage
+            peers={peers}
+            onMessagePeer={openMessage}
+            onViewProfile={viewPeerProfile}
+          />
+        )}
+        {activeTab === "profile" && (
+          <ProfilePage
+            currentUserId={CURRENT_USER_ID}
+            onMessagePeer={openMessage}
+            profileUserId={profileUserId}
+            profileName={profileName}
+            portfolioStats={portfolioStats}
+            peer={peers.find((peer) => peer.id === profileUserId)}
+          />
+        )}
         {activeTab === "settings" && <SettingsPage />}
 
         {showPaymentDemo && (
@@ -1302,6 +1457,14 @@ function AppDashboard({
             </button>
           </div>
         )}
+        <MessageChatModal
+          draft={messageDraft}
+          messages={activeMessagePeer ? messageThreads[activeMessagePeer.id] || [] : []}
+          onClose={() => setActiveMessagePeer(null)}
+          onDraftChange={setMessageDraft}
+          onSend={sendMessage}
+          peer={activeMessagePeer}
+        />
       </section>
     </div>
   );
@@ -1490,16 +1653,20 @@ function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
   );
 }
 
-function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
-  const [sentPeerId, setSentPeerId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<NetworkFilter>("전체");
+function NetworkingPage({
+  peers,
+  onMessagePeer,
+  onViewProfile,
+}: {
+  peers: Insight["peers"];
+  onMessagePeer: (peer: Insight["peers"][number]) => void;
+  onViewProfile: (peerId: string) => void;
+}) {
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const featuredPeers = peers.map((peer, index) => ({
     ...peer,
     avatar: getPeerAvatar(peer, index),
     matchScore: [92, 88, 84, 81, 78][index] || 76,
-    category: ["해커톤", "공모전", "포트폴리오 피드백", "사이드프로젝트", "사이드프로젝트"][
-      index
-    ] as Exclude<NetworkFilter, "전체">,
     intent: ["해커톤 팀빌딩", "공모전 동료", "포트폴리오 피드백", "사이드프로젝트", "커피챗"][index] || "협업",
     note: [
       "백엔드와 API 관심사가 겹치고 인턴 준비 단계가 비슷합니다.",
@@ -1510,24 +1677,39 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
     ][index] || "관심 분야와 활동 목표가 가깝습니다.",
   }));
   const filteredPeers =
-    activeFilter === "전체"
+    selectedTags.length === 0
       ? featuredPeers
-      : featuredPeers.filter((peer) => peer.category === activeFilter);
-  const activeFilterCopy = networkFilterCopy[activeFilter];
+      : featuredPeers.filter((peer) => selectedTags.some((tag) => peer.tags.includes(tag)));
+  const activeFilterCopy = getNetworkFilterCopy(selectedTags);
+
+  function toggleNetworkTag(tag: string) {
+    if (tag === "전체") {
+      setSelectedTags([]);
+      return;
+    }
+
+    setSelectedTags((tags) =>
+      tags.includes(tag) ? tags.filter((item) => item !== tag) : [...tags, tag],
+    );
+  }
 
   return (
     <section className="networking-page">
       <div className="networking-toolbar">
-        {networkFilters.map((filter) => (
+        {networkFilterTags.map((filter) => {
+          const isActive =
+            filter === "전체" ? selectedTags.length === 0 : selectedTags.includes(filter);
+          return (
           <button
-            className={activeFilter === filter ? "active" : ""}
+            className={isActive ? "active" : ""}
             key={filter}
-            onClick={() => setActiveFilter(filter)}
+            onClick={() => toggleNetworkTag(filter)}
             type="button"
           >
             {filter}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <div className="networking-layout">
@@ -1575,14 +1757,12 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
                   ))}
                 </div>
                 <footer>
-                  <button type="button">프로필 보기</button>
-                  <button
-                    className={sentPeerId === peer.id ? "sent" : ""}
-                    onClick={() => setSentPeerId(peer.id)}
-                    type="button"
-                  >
-                    <Mail size={16} />
-                    {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
+                  <button type="button" onClick={() => onViewProfile(peer.id)}>
+                    프로필 보기
+                  </button>
+                  <button onClick={() => onMessagePeer(peer)} type="button">
+                    <MessageSquareText size={16} />
+                    메시지 보내기
                   </button>
                 </footer>
               </article>
@@ -1623,17 +1803,100 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
           <section className="networking-template-card">
             <div className="section-title">
               <Lightbulb size={20} />
-              <h3>추천 편지</h3>
+              <h3>추천 메시지</h3>
             </div>
             <p>{activeFilterCopy.template}</p>
             <button type="button">
               <span aria-hidden="true">✉</span>
-              템플릿으로 시작
+              메시지 템플릿 사용
             </button>
           </section>
         </aside>
       </div>
     </section>
+  );
+}
+
+function MessageChatModal({
+  draft,
+  messages,
+  onClose,
+  onDraftChange,
+  onSend,
+  peer,
+}: {
+  draft: string;
+  messages: ChatMessage[];
+  onClose: () => void;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  peer: Insight["peers"][number] | null;
+}) {
+  if (!peer) {
+    return null;
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSend();
+  }
+
+  return (
+    <div className="message-modal-backdrop" role="presentation">
+      <section
+        aria-labelledby="message-modal-title"
+        aria-modal="true"
+        className="message-modal"
+        role="dialog"
+      >
+        <header className="message-modal-header">
+          <span
+            aria-hidden="true"
+            className="message-peer-avatar initial-avatar"
+            style={{ "--avatar-color": avatarPalette[0] } as React.CSSProperties}
+          >
+            {Array.from(peer.name)[0]}
+          </span>
+          <div>
+            <h3 id="message-modal-title">{peer.name}</h3>
+            <p>{peer.schoolHidden}</p>
+            <div className="message-peer-tags">
+              {peer.tags.slice(0, 3).map((tag) => (
+                <span key={tag}>{tag}</span>
+              ))}
+            </div>
+          </div>
+          <button aria-label="메시지 창 닫기" onClick={onClose} type="button">
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="message-thread" aria-label={`${peer.name}님과의 메시지`}>
+          {messages.map((message) => (
+            <div className={`message-row ${message.from}`} key={message.id}>
+              <div className="message-bubble">
+                <p>{message.text}</p>
+                <small>{message.time}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <form className="message-composer" onSubmit={handleSubmit}>
+          <textarea
+            aria-label="메시지 입력"
+            onChange={(event) => onDraftChange(event.target.value)}
+            placeholder="메시지를 입력하세요"
+            rows={2}
+            value={draft}
+          />
+          <button disabled={!draft.trim()} type="submit">
+            <Send size={16} />
+            전송
+          </button>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -1687,7 +1950,26 @@ function SettingsPage() {
   );
 }
 
-function ProfilePage() {
+function ProfilePage({
+  currentUserId,
+  onMessagePeer,
+  profileUserId,
+  profileName,
+  portfolioStats,
+  peer,
+}: {
+  currentUserId: string;
+  onMessagePeer: (peer: Insight["peers"][number]) => void;
+  profileUserId: string;
+  profileName: string;
+  portfolioStats: PortfolioStats;
+  peer?: Insight["peers"][number];
+}) {
+  const isOwnProfile = currentUserId === profileUserId;
+  const displayName = isOwnProfile ? profileName : peer?.name || "김O현";
+  const displayStats = isOwnProfile ? portfolioStats : defaultPortfolioStats;
+  const profileActivities = buildActivityHistory(displayStats);
+
   return (
     <section className="profile-page">
       <section className="profile-top-grid">
@@ -1703,7 +1985,7 @@ function ProfilePage() {
             />
             <span aria-hidden="true" />
           </div>
-          <h2>김O현</h2>
+          <h2>{displayName}</h2>
           <div className="profile-tag-row">
             {["백엔드 개발자", "데이터 분석", "PM/기획", "문제 해결", "협업 지향", "성장 지향"].map(
               (tag) => (
@@ -1720,11 +2002,28 @@ function ProfilePage() {
             </p>
             <small>97/100</small>
           </div>
+          {!isOwnProfile && (
+            <div className="profile-action-row">
+              <button
+                className="profile-primary-button"
+                disabled={!peer}
+                onClick={() => peer && onMessagePeer(peer)}
+                type="button"
+              >
+                <MessageSquareText size={16} />
+                메시지 보내기
+              </button>
+              <button className="profile-secondary-button" type="button">
+                <BookOpen size={16} />
+                북마크
+              </button>
+            </div>
+          )}
           <div className="profile-section-divider" />
           <section className="profile-activity-section">
             <h3>활동 이력</h3>
             <div className="activity-list">
-              {activityHistory.map((item) => {
+              {profileActivities.map((item) => {
                 const Icon = item.icon;
                 return (
                   <div className={`activity-item ${item.tone}`} key={item.label}>
@@ -1865,12 +2164,14 @@ const dashboardNavItems = [
   { label: "홈", icon: HomeIcon, tab: "home" },
   { label: "분석 리포트", icon: BarChart3, tab: "report" },
   { label: "네트워킹", icon: Users, tab: "networking" },
+  { label: "모임", icon: CalendarDays, href: "/meetings" },
   { label: "프로필", icon: User, tab: "profile" },
   { label: "설정", icon: Settings, tab: "settings" },
 ] satisfies Array<{
   label: string;
   icon: LucideIcon;
   tab?: DashboardTab;
+  href?: string;
 }>;
 
 const dashboardTabHeadings: Record<DashboardTab, { title: string; description: string }> = {
@@ -1884,7 +2185,7 @@ const dashboardTabHeadings: Record<DashboardTab, { title: string; description: s
   },
   networking: {
     title: "네트워킹",
-    description: "나와 목표가 가까운 동료를 찾고 편지로 협업을 시작해보세요.",
+    description: "나와 목표가 가까운 동료를 찾고 메시지로 협업을 시작해보세요.",
   },
   profile: {
     title: "마이페이지",
@@ -1905,12 +2206,6 @@ function isDashboardTab(tab: string | null): tab is DashboardTab {
     tab === "settings"
   );
 }
-
-const activityHistory = [
-  { label: "공모전", count: "8회 참여", icon: Trophy, tone: "blue" },
-  { label: "해커톤", count: "5회 참여", icon: Code2, tone: "green" },
-  { label: "교환학생", count: "1회 참여", icon: Globe2, tone: "violet" },
-];
 
 const portfolioItems = [
   {
@@ -2069,6 +2364,219 @@ function getPeerAvatar(peer: Insight["peers"][number], index: number) {
   return peer.avatar ?? peerAvatarAssets[index % peerAvatarAssets.length];
 }
 
+function formatChatTime() {
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+}
+
+type SchoolMajorComparison = {
+  matchedStudents: number;
+  schools: Array<{
+    school: string;
+    major: string;
+    count: number;
+  }>;
+};
+
+function getCurriculumKey(major: string) {
+  if (major.includes("컴퓨터")) {
+    return "컴퓨터공학과";
+  }
+  if (major.includes("소프트웨어")) {
+    return "소프트웨어학과";
+  }
+  if (major.includes("데이터")) {
+    return "데이터사이언스학과";
+  }
+  return major || "컴퓨터공학과";
+}
+
+function buildSchoolMajorComparison(
+  school: string,
+  major: string,
+  field: string,
+): SchoolMajorComparison {
+  const curriculum = getCurriculumKey(major);
+  const matchedStudents = dummyStudents.filter(
+    (student) => student.curriculum === curriculum && student.fields.includes(field),
+  );
+  const counts = new Map<string, { school: string; major: string; count: number }>();
+
+  matchedStudents.forEach((student) => {
+    const key = `${student.school}||${student.major}`;
+    const current = counts.get(key);
+    if (current) {
+      current.count += 1;
+      return;
+    }
+    counts.set(key, {
+      school: student.school,
+      major: student.major,
+      count: 1,
+    });
+  });
+
+  if (counts.size === 0) {
+    counts.set(`${school}||${major}`, { school, major, count: 0 });
+  }
+
+  return {
+    matchedStudents: matchedStudents.length,
+    schools: [...counts.values()].sort((a, b) => b.count - a.count || a.school.localeCompare(b.school, "ko")),
+  };
+}
+
+function FieldComparisonReport({
+  school,
+  major,
+  field,
+  schoolComparison,
+  onDeepDive,
+}: {
+  school: string;
+  major: string;
+  field: string;
+  schoolComparison: SchoolMajorComparison;
+  onDeepDive: () => void;
+}) {
+  return (
+    <div className="field-report">
+      <section className="field-summary-section">
+        <div className="field-section-heading">
+          <p className="eyebrow">같은 분야 타학교 비교</p>
+          <h2>
+            같은 분야({field}) 타학교 대비 우리 학교 강점
+          </h2>
+          <span>
+            {school} {major} · 동일 커리큘럼/분야 학생 {schoolComparison.matchedStudents}명 기준
+          </span>
+        </div>
+
+        <div className="field-summary-grid">
+          <FieldFindingCard
+            tone="strong"
+            title="강점"
+            items={[
+              "자료구조/알고리즘 과목 비중이 타학교 대비 높음",
+              "실습 중심 프로젝트 과목이 커리큘럼에 포함됨",
+              "데이터베이스 관련 과목 다양성이 높음",
+            ]}
+          />
+          <FieldFindingCard
+            tone="weak"
+            title="약점"
+            items={[
+              "AI/머신러닝 관련 과목이 타학교 대비 부족함",
+              "산학협력 연계 과목 비중이 낮음",
+              "보안 관련 과목이 커리큘럼에 미포함",
+            ]}
+          />
+        </div>
+      </section>
+
+      <section className="subject-comparison-section">
+        <div className="field-section-heading compact">
+          <h2>타학교 대비 과목 비교</h2>
+          <span>같은 {field} 분야, 같은 커리큘럼 선택 학생 기준</span>
+        </div>
+
+        <div className="subject-comparison-table">
+          {curriculumComparisonRows.map((row) => (
+            <SubjectComparisonRow key={row.category} {...row} />
+          ))}
+        </div>
+
+        <div className="subject-legend">
+          <span>
+            <i className="mine" />
+            우리학교
+          </span>
+          <span>
+            <i className="average" />
+            타학교 평균
+          </span>
+        </div>
+
+        <div className="dynamic-school-summary">
+          {schoolComparison.schools.slice(0, 4).map((item) => (
+            <span key={`${item.school}-${item.major}`}>
+              {item.school} {item.major} <b>{item.count}명</b>
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="ai-insight-box">
+        <p>
+          {field} 분야를 희망하는 학생 기준, 우리 학교는 알고리즘/자료구조 과목이
+          강점이나 AI/머신러닝 및 보안 과목 보강이 필요합니다. 관련 온라인 강의나
+          스터디 참여를 추천합니다.
+        </p>
+        <button type="button" onClick={onDeepDive}>
+          같은 분야 학생들과 비교하기
+          <ArrowRight size={18} />
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function FieldFindingCard({
+  tone,
+  title,
+  items,
+}: {
+  tone: "strong" | "weak";
+  title: string;
+  items: string[];
+}) {
+  return (
+    <article className={`field-finding-card ${tone}`}>
+      <h3>{title}</h3>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>
+            <span>{tone === "strong" ? "✓" : "!"}</span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+function SubjectComparisonRow({
+  category,
+  mine,
+  other,
+}: {
+  category: string;
+  mine: number;
+  other: number;
+}) {
+  const tone = mine > other ? "strong" : mine < other ? "weak" : "same";
+  const max = 5;
+  return (
+    <div className={`subject-row ${tone}`}>
+      <strong>{category}</strong>
+      <div className="subject-bar-cell">
+        <span className="subject-track">
+          <i style={{ width: `${(mine / max) * 100}%` }} />
+        </span>
+        <b>{mine}개</b>
+      </div>
+      <div className="subject-bar-cell average">
+        <span className="subject-track">
+          <i style={{ width: `${(other / max) * 100}%` }} />
+        </span>
+        <b>{other}개</b>
+      </div>
+    </div>
+  );
+}
+
 const dashboardExtraPeers: Insight["peers"] = [
   {
     id: "peer-extra-1",
@@ -2099,294 +2607,6 @@ const dashboardExtraPeers: Insight["peers"] = [
   },
 ];
 
-type ReportMetric = {
-  label: string;
-  score: number;
-  icon: LucideIcon;
-  position: string;
-};
-
-const reportMetricMeta: Array<Omit<ReportMetric, "score"> & { fallbackScore: number }> = [
-  {
-    label: "의미근접",
-    fallbackScore: 78,
-    icon: GraduationCap,
-    position: "top",
-  },
-  {
-    label: "과목일치",
-    fallbackScore: 36,
-    icon: Briefcase,
-    position: "right-top",
-  },
-  {
-    label: "분야균형",
-    fallbackScore: 86,
-    icon: Trophy,
-    position: "right-bottom",
-  },
-  {
-    label: "학기구조",
-    fallbackScore: 62,
-    icon: Globe2,
-    position: "left-bottom",
-  },
-  {
-    label: "전공폭",
-    fallbackScore: 74,
-    icon: Code2,
-    position: "left-top",
-  },
-];
-
-function buildReportMetrics(metrics: Insight["analysis"]["metrics"]): ReportMetric[] {
-  return reportMetricMeta.map((metric) => ({
-    label: metric.label,
-    icon: metric.icon,
-    position: metric.position,
-    score:
-      metrics.find((candidate) => candidate.label === metric.label)?.score ??
-      metric.fallbackScore,
-  }));
-}
-
-function buildRadarPoints(scores: number[]) {
-  return scores
-    .map((score, index) => getRadarPoint(score, index).join(","))
-    .join(" ");
-}
-
-function getRadarPoint(score: number, index: number) {
-  const center = 160;
-  const radius = 132;
-  const angle = -Math.PI / 2 + (index * Math.PI * 2) / reportMetricMeta.length;
-  const scaled = (score / 100) * radius;
-  const x = center + Math.cos(angle) * scaled;
-  const y = center + Math.sin(angle) * scaled;
-  return [Number(x.toFixed(1)), Number(y.toFixed(1))];
-}
-
-function ReportMeta({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="report-meta">
-      <span>{icon}</span>
-      <div>
-        <small>{label}</small>
-        <strong>{value}</strong>
-      </div>
-    </div>
-  );
-}
-
-function ScoreRow({
-  metric,
-}: {
-  metric: ReportMetric;
-}) {
-  const Icon = metric.icon;
-  const tone = getScoreTone(metric.score);
-  return (
-    <div className={`score-row ${tone}`}>
-      <span className="score-row-icon">
-        <Icon size={20} />
-      </span>
-      <strong>{metric.label}</strong>
-      <b>{metric.score}</b>
-      <small>/ 100</small>
-    </div>
-  );
-}
-
-function ReportNotice({
-  tone,
-  icon,
-  title,
-  subtitle,
-  items,
-}: {
-  tone: "good" | "bad";
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  items: string[];
-}) {
-  return (
-    <section className={`report-notice ${tone}`}>
-      <div className="notice-label">
-        <span>{icon}</span>
-        <strong>{title}</strong>
-        <p>{subtitle}</p>
-      </div>
-      <ul>
-        {items.map((item) => (
-          <li key={item}>
-            <span className="notice-item-icon">{tone === "good" ? "✓" : "!"}</span>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function InsightEvidencePanel({ insight }: { insight: Insight }) {
-  return (
-    <section className="insight-evidence">
-      <div className="insight-evidence-heading">
-        <p className="eyebrow">분석 근거</p>
-        <h3>{insight.headline}</h3>
-      </div>
-
-      <div className="insight-evidence-grid">
-        <article>
-          <div className="evidence-title">
-            <Trophy size={20} />
-            <strong>추천 활동</strong>
-          </div>
-          <ul>
-            {insight.activities.map((activity) => (
-              <li key={activity.title}>
-                <b>{activity.title}</b>
-                <span>{activity.stat}</span>
-                <p>{activity.why}</p>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article>
-          <div className="evidence-title">
-            <BookOpen size={20} />
-            <strong>커리큘럼 해석</strong>
-          </div>
-          <ul>
-            {insight.curriculum.map((item) => (
-              <li key={item.name}>
-                <b>{item.name}</b>
-                <span>{item.strength}</span>
-                <p>{item.caution}</p>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article>
-          <div className="evidence-title">
-            <Scale size={20} />
-            <strong>비교 시그널</strong>
-          </div>
-          <ul>
-            {insight.comparisons.slice(0, 3).map((comparison) => (
-              <li key={`${comparison.school}-${comparison.department}`}>
-                <b>
-                  {comparison.school} <small>{comparison.delta}</small>
-                </b>
-                <span>{comparison.department}</span>
-                <p>{comparison.signal}</p>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </div>
-    </section>
-  );
-}
-
-function CurriculumRankingPanel({
-  similarity,
-}: {
-  similarity: Insight["curriculumSimilarity"];
-}) {
-  const topRankings = similarity.rankings.slice(0, 5);
-
-  return (
-    <section className="curriculum-ranking">
-      <div className="section-heading-row">
-        <div>
-          <p className="eyebrow">커리큘럼 유사도</p>
-          <h3>
-            {similarity.base.school} {similarity.base.department}와 가까운 학교
-          </h3>
-          <span>
-            기준 과목 {similarity.base.courseCount}개 ·{" "}
-            {similarity.base.filters.grade
-              ? `${similarity.base.filters.grade}학년 필터`
-              : "전체 학년"}
-          </span>
-        </div>
-        <strong>{topRankings.length}개 결과</strong>
-      </div>
-
-      <div className="curriculum-ranking-list">
-        {topRankings.map((item) => (
-          <article className="curriculum-rank-card" key={`${item.school}-${item.department}`}>
-            <div className="rank-main">
-              <span className="rank-number">{item.rank}</span>
-              <div>
-                <h4>
-                  {item.school}
-                  <small>{item.department}</small>
-                </h4>
-                <div className="rank-shared-courses" aria-label="공통 과목">
-                  {item.sharedCourses.length > 0
-                    ? item.sharedCourses.slice(0, 4).map((course) => (
-                        <span key={course}>{course}</span>
-                      ))
-                    : <span>직접 일치 과목 적음</span>}
-                </div>
-              </div>
-            </div>
-
-            <div className="rank-score">
-              <strong>{Math.round(item.score * 100)}</strong>
-              <span>점</span>
-            </div>
-
-            <div className="rank-components">
-              <MetricPill label="의미" value={item.components.semantic} />
-              <MetricPill label="과목" value={item.components.jaccard} />
-              <MetricPill label="분야" value={item.components.area} />
-              <MetricPill label="학기" value={item.components.structure} />
-            </div>
-
-            <div className="rank-tags">
-              {item.sharedAreas.slice(0, 4).map((area) => (
-                <span key={area}>{area}</span>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function MetricPill({ label, value }: { label: string; value: number }) {
-  return (
-    <span>
-      {label} <b>{Math.round(value * 100)}</b>
-    </span>
-  );
-}
-
-function getScoreTone(score: number) {
-  if (score >= 75) {
-    return "score-high";
-  }
-  if (score >= 50) {
-    return "score-mid";
-  }
-  return "score-low";
-}
-
 function getMatchBadgeTone(rate: number) {
   if (rate >= 90) {
     return "match-high";
@@ -2395,6 +2615,44 @@ function getMatchBadgeTone(rate: number) {
     return "match-mid";
   }
   return "match-low";
+}
+
+function getNetworkFilterCopy(selectedTags: string[]) {
+  const label = selectedTags.length > 0 ? selectedTags.join(", ") : "전체";
+  return {
+    eyebrow: selectedTags.length > 0 ? "태그 기반 추천" : "커리어 동료 추천",
+    title:
+      selectedTags.length > 0
+        ? `${label} 태그를 가진 사용자`
+        : "함께 성장할 가능성이 높은 사용자",
+    description:
+      selectedTags.length > 0
+        ? "선택한 태그 중 하나라도 보유한 사용자를 OR 조건으로 보여줍니다."
+        : "전공, 활동 이력, 관심 태그를 기준으로 지금 연락하기 좋은 동료를 우선 추천합니다.",
+    template:
+      selectedTags.length > 0
+        ? `“${selectedTags[0]} 관심사가 보여 연락드려요. 서로의 경험을 나누며 같이 성장해보고 싶습니다.”`
+        : "“같은 백엔드 관심사라 연락드려요. 이번 해커톤에서 API 설계와 배포를 같이 맡아볼 동료를 찾고 있습니다.”",
+  };
+}
+
+function buildPortfolioStats(entries: PortfolioEntry[]): PortfolioStats {
+  return entries.reduce<PortfolioStats>(
+    (stats, entry) => ({
+      ...stats,
+      [entry.category]: stats[entry.category] + 1,
+    }),
+    { ...emptyPortfolioStats },
+  );
+}
+
+function buildActivityHistory(stats: PortfolioStats) {
+  return [
+    { label: "프로젝트", count: `${stats.프로젝트}개`, icon: Code2, tone: "blue" },
+    { label: "논문", count: `${stats.논문}편`, icon: BookOpen, tone: "green" },
+    { label: "대회", count: `${stats.대회}회`, icon: Trophy, tone: "violet" },
+    { label: "기타", count: `${stats.기타}개`, icon: Globe2, tone: "blue" },
+  ];
 }
 
 function getProfileTagTone(tag: string) {
@@ -2518,6 +2776,97 @@ function CustomDropdown({
   );
 }
 
+function FieldChipDropdown({
+  value,
+  disabled = false,
+  options,
+  onChange,
+}: {
+  value: string;
+  disabled?: boolean;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function closeOnOutsideInteraction(event: MouseEvent) {
+      if (!selectRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideInteraction);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideInteraction);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  function selectField(option: string) {
+    onChange(option);
+    setIsOpen(false);
+  }
+
+  return (
+    <div
+      className={`custom-select field-chip-select ${isOpen ? "open" : ""} ${
+        disabled ? "disabled" : ""
+      }`}
+      ref={selectRef}
+    >
+      <button
+        className={`custom-select-trigger ${value ? "selected" : ""}`}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        disabled={disabled}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span className="custom-select-label">
+          <span className="custom-select-icon" aria-hidden="true">
+            🎯
+          </span>
+          <span>분야</span>
+        </span>
+        <span className="custom-select-value">
+          {value || (disabled ? "학과를 먼저 선택하세요" : "분야를 선택하세요")}
+        </span>
+        <ChevronDown className="custom-select-chevron" size={20} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="custom-select-menu field-chip-menu" role="listbox" aria-label="분야">
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="option"
+              aria-selected={option === value}
+              className={option === value ? "active" : ""}
+              onClick={() => selectField(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OnboardingStep({
   active = false,
   step,
@@ -2542,38 +2891,134 @@ function SectionNumber({ number }: { number: string }) {
   return <span className="section-number">{number}</span>;
 }
 
-function ChipGroup({
-  label,
-  selected,
-  onToggle,
+function MatchingDistanceSlider({
+  value,
+  onChange,
 }: {
-  label: string;
-  selected: string[];
-  onToggle: (chip: string) => void;
+  value: MatchingDistance;
+  onChange: (value: MatchingDistance) => void;
+}) {
+  const selectedIndex = matchingDistanceOptions.findIndex((option) => option.value === value);
+  const selectedOption = matchingDistanceOptions[selectedIndex] || matchingDistanceOptions[1];
+
+  return (
+    <div className="matching-distance-control">
+      <div className="matching-distance-labels">
+        <span>
+          나와 비슷한 동료
+          <small>(유사도 높음)</small>
+        </span>
+        <span>
+          다른 시각의 동료
+          <small>(유사도 낮음)</small>
+        </span>
+      </div>
+      <input
+        aria-label="동료 유사도 거리"
+        max={2}
+        min={0}
+        step={1}
+        type="range"
+        value={selectedIndex}
+        onChange={(event) => onChange(matchingDistanceOptions[Number(event.target.value)].value)}
+      />
+      <div className="matching-distance-options">
+        {matchingDistanceOptions.map((option) => (
+          <button
+            className={option.value === value ? "active" : ""}
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p>
+        <strong>{selectedOption.label}</strong>
+        <span>{selectedOption.range}</span>
+        {selectedOption.description}
+      </p>
+    </div>
+  );
+}
+
+function PortfolioEntryEditor({
+  entries,
+  stats,
+  onAdd,
+  onRemove,
+  onUpdate,
+}: {
+  entries: PortfolioEntry[];
+  stats: PortfolioStats;
+  onAdd: () => void;
+  onRemove: (id: number) => void;
+  onUpdate: (id: number, key: keyof Omit<PortfolioEntry, "id">, value: string) => void;
 }) {
   return (
-    <fieldset className="chip-group">
-      <legend>
-        {label} <small>(복수 선택)</small>
-      </legend>
-      <div>
-        {fieldChips.map((chip) => {
-          const isSelected = selected.includes(chip);
-          return (
-            <button
-              aria-pressed={isSelected}
-              className={isSelected ? "selected" : ""}
-              key={`${label}-${chip}`}
-              onClick={() => onToggle(chip)}
-              type="button"
-            >
-              {isSelected ? "✓ " : ""}
-              {chip}
-            </button>
-          );
-        })}
+    <div className="portfolio-entry-editor">
+      <div className="portfolio-entry-list">
+        {entries.map((entry, index) => (
+          <article className="portfolio-entry-form" key={entry.id}>
+            {entries.length > 1 && (
+              <button
+                className="portfolio-entry-remove"
+                type="button"
+                aria-label={`${index + 1}번째 포트폴리오 항목 삭제`}
+                onClick={() => onRemove(entry.id)}
+              >
+                ×
+              </button>
+            )}
+            <label>
+              <span>분류</span>
+              <select
+                value={entry.category}
+                onChange={(event) =>
+                  onUpdate(entry.id, "category", event.target.value as PortfolioCategory)
+                }
+              >
+                {portfolioCategoryOptions.map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>제목</span>
+              <input
+                maxLength={60}
+                placeholder="예: 실시간 공공 데이터 대시보드"
+                value={entry.title}
+                onChange={(event) => onUpdate(entry.id, "title", event.target.value)}
+              />
+            </label>
+            <label>
+              <span>설명</span>
+              <textarea
+                maxLength={160}
+                placeholder="역할, 사용 기술, 결과를 간단히 적어주세요."
+                rows={2}
+                value={entry.description}
+                onChange={(event) => onUpdate(entry.id, "description", event.target.value)}
+              />
+            </label>
+          </article>
+        ))}
       </div>
-    </fieldset>
+      <div className="portfolio-entry-footer">
+        <div className="portfolio-stats-preview">
+          {portfolioCategoryOptions.map((category) => (
+            <span key={category}>
+              {category} <b>{stats[category]}</b>
+            </span>
+          ))}
+        </div>
+        <button type="button" onClick={onAdd} disabled={entries.length >= 10}>
+          항목 추가 +
+        </button>
+      </div>
+    </div>
   );
 }
 
