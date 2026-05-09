@@ -3219,7 +3219,7 @@ button {
 
 .profile-page {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 24px;
   min-width: 0;
 }
@@ -3236,11 +3236,12 @@ button {
 }
 
 .profile-main-card {
-  display: grid;
-  align-content: start;
-  justify-items: center;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
   gap: 16px;
-  padding: 34px 24px;
+  height: 100%;
+  padding: 30px 24px;
 }
 
 .profile-large-avatar {
@@ -3290,6 +3291,8 @@ button {
 .profile-bio {
   position: relative;
   margin-top: 8px;
+  padding-left: 22px;
+  border-left: 4px solid var(--blue);
 }
 
 .profile-bio strong {
@@ -3355,12 +3358,30 @@ button {
 
 .profile-top-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.82fr);
-  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: 24px;
 }
 
 .profile-panel {
   padding: 24px;
+}
+
+.profile-section-divider {
+  width: 100%;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.profile-activity-section {
+  width: 100%;
+}
+
+.profile-activity-section h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .profile-panel h3,
@@ -3376,6 +3397,12 @@ button {
   color: #7c879a;
   font-size: 13px;
   font-weight: 800;
+}
+
+.skill-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .panel-title-row,
@@ -3396,12 +3423,13 @@ button {
 
 .competency-radar {
   display: grid;
+  flex: 1;
   place-items: center;
-  min-height: 280px;
+  min-height: 360px;
 }
 
 .competency-radar svg {
-  width: min(100%, 360px);
+  width: min(100%, 440px);
   height: auto;
 }
 
@@ -5537,14 +5565,15 @@ button {
 
 .profile-page {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr);
-  align-items: stretch;
+  grid-template-columns: 1fr;
   gap: 24px;
 }
 
-.profile-content,
 .profile-top-grid {
-  display: contents;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: 24px;
 }
 
 .profile-main-card,
@@ -5554,28 +5583,21 @@ button {
 
 .profile-main-card {
   display: flex;
+  align-items: center;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 24px 16px;
-}
-
-.skill-panel {
-  grid-column: 2;
-}
-
-.activity-panel {
-  grid-column: 3;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 30px 24px;
 }
 
 .profile-avatar-shell,
 .profile-large-avatar {
-  width: 80px;
-  height: 80px;
+  width: 112px;
+  height: 112px;
 }
 
 .profile-main-card h2 {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .profile-tag-row {
@@ -5592,15 +5614,38 @@ button {
   line-height: 1.6;
 }
 
-.profile-primary-button,
-.profile-secondary-button {
+.profile-section-divider {
   width: 100%;
-  min-height: 44px;
-  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.profile-activity-section {
+  width: 100%;
+}
+
+.profile-activity-section h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.skill-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.skill-panel .competency-radar {
+  min-height: 360px;
+}
+
+.skill-panel .competency-radar svg {
+  width: min(100%, 440px);
 }
 
 .portfolio-area {
-  grid-column: 1 / -1;
   margin-top: 0;
 }
 
@@ -5623,12 +5668,8 @@ button {
 }
 
 @media (max-width: 1180px) {
-  .profile-page {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-
-  .activity-panel {
-    grid-column: 2;
+  .profile-top-grid {
+    grid-template-columns: 1fr;
   }
 
   .portfolio-grid {
@@ -5648,7 +5689,6 @@ button {
   }
 
   .skill-panel,
-  .activity-panel,
   .portfolio-area {
     grid-column: 1;
   }

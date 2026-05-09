@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BarChart3,
   Bell,
-  Bookmark,
   BookOpen,
   Briefcase,
   CalendarDays,
@@ -25,7 +24,6 @@ import {
   Mail,
   MessageSquareText,
   Scale,
-  Send,
   Settings,
   ShieldCheck,
   Tag,
@@ -1692,62 +1690,39 @@ function SettingsPage() {
 function ProfilePage() {
   return (
     <section className="profile-page">
-      <article className="profile-main-card">
-        <div className="profile-avatar-shell">
-          <Image
-            className="profile-large-avatar"
-            src="/assets/avatar-peer-1.webp"
-            alt=""
-            width={176}
-            height={176}
-            unoptimized
-          />
-          <span aria-hidden="true" />
-        </div>
-        <h2>김O현</h2>
-        <div className="profile-tag-row">
-          {["백엔드 개발자", "데이터 분석", "PM/기획", "문제 해결", "협업 지향", "성장 지향"].map(
-            (tag) => (
-              <span className={getProfileTagTone(tag)} key={tag}>{tag}</span>
-            ),
-          )}
-        </div>
-        <div className="profile-bio">
-          <strong>자기소개</strong>
-          <p>
-            데이터와 기술로 사람들의 일상을 더 편리하게 만드는 서비스를 만들고 싶습니다.
-            사용자 중심의 사고와 빠른 실행, 지속적인 개선을 통해 팀과 함께 의미 있는
-            결과를 만들어내는 개발자가 되겠습니다.
-          </p>
-          <small>97/100</small>
-        </div>
-        <div className="hidden-school-card">
-          <LockKeyhole size={20} />
-          <span>비공개 처리됨</span>
-        </div>
-        <button className="profile-primary-button" type="button">
-          <Send size={19} />
-          메시지 보내기
-        </button>
-        <button className="profile-secondary-button" type="button">
-          <Bookmark size={19} />
-          북마크
-        </button>
-      </article>
-
-      <div className="profile-content">
-        <section className="profile-top-grid">
-          <article className="profile-panel skill-panel">
-            <h3>핵심 역량</h3>
-            <CompetencyRadar />
-            <p>5점 만점 기준 (과연 AI 분석)</p>
-          </article>
-
-          <article className="profile-panel activity-panel">
-            <div className="panel-title-row">
-              <h3>활동 이력</h3>
-              <Info size={17} />
-            </div>
+      <section className="profile-top-grid">
+        <article className="profile-main-card">
+          <div className="profile-avatar-shell">
+            <Image
+              className="profile-large-avatar"
+              src="/assets/avatar-peer-1.webp"
+              alt=""
+              width={176}
+              height={176}
+              unoptimized
+            />
+            <span aria-hidden="true" />
+          </div>
+          <h2>김O현</h2>
+          <div className="profile-tag-row">
+            {["백엔드 개발자", "데이터 분석", "PM/기획", "문제 해결", "협업 지향", "성장 지향"].map(
+              (tag) => (
+                <span className={getProfileTagTone(tag)} key={tag}>{tag}</span>
+              ),
+            )}
+          </div>
+          <div className="profile-bio">
+            <strong>자기소개</strong>
+            <p>
+              데이터와 기술로 사람들의 일상을 더 편리하게 만드는 서비스를 만들고 싶습니다.
+              사용자 중심의 사고와 빠른 실행, 지속적인 개선을 통해 팀과 함께 의미 있는
+              결과를 만들어내는 개발자가 되겠습니다.
+            </p>
+            <small>97/100</small>
+          </div>
+          <div className="profile-section-divider" />
+          <section className="profile-activity-section">
+            <h3>활동 이력</h3>
             <div className="activity-list">
               {activityHistory.map((item) => {
                 const Icon = item.icon;
@@ -1762,46 +1737,52 @@ function ProfilePage() {
                 );
               })}
             </div>
-          </article>
-        </section>
+          </section>
+        </article>
 
-        <section className="portfolio-area">
-          <div className="section-heading-row">
-            <div className="portfolio-title">
-              <h2>포트폴리오</h2>
-              <span>총 6개</span>
-            </div>
-            <button>
-              전체 보기
-              <ChevronRight size={18} />
-            </button>
+        <article className="profile-panel skill-panel">
+          <h3>핵심 역량</h3>
+          <CompetencyRadar />
+          <p>5점 만점 기준 (과연 AI 분석)</p>
+        </article>
+      </section>
+
+      <section className="portfolio-area">
+        <div className="section-heading-row">
+          <div className="portfolio-title">
+            <h2>포트폴리오</h2>
+            <span>총 6개</span>
           </div>
-          <div className="portfolio-grid">
-            {portfolioItems.map((item) => (
-              <article className={`portfolio-card ${item.locked ? "locked" : ""}`} key={item.title}>
-                <div className="portfolio-image-wrap">
-                  <Image src={item.image} alt="" width={520} height={330} unoptimized />
-                  <span className="portfolio-category">{item.category}</span>
-                  {item.locked && (
-                    <div className="portfolio-lock">
-                      <LockKeyhole size={24} />
-                      <strong>🔒 프리미엄에서 확인</strong>
-                    </div>
-                  )}
-                </div>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-                <div className="portfolio-tech-row">
-                  {item.tech.map((tech) => (
-                    <span key={tech}>{tech}</span>
-                  ))}
-                </div>
-                <time>{item.date}</time>
-              </article>
-            ))}
-          </div>
-        </section>
-      </div>
+          <button>
+            전체 보기
+            <ChevronRight size={18} />
+          </button>
+        </div>
+        <div className="portfolio-grid">
+          {portfolioItems.map((item) => (
+            <article className={`portfolio-card ${item.locked ? "locked" : ""}`} key={item.title}>
+              <div className="portfolio-image-wrap">
+                <Image src={item.image} alt="" width={520} height={330} unoptimized />
+                <span className="portfolio-category">{item.category}</span>
+                {item.locked && (
+                  <div className="portfolio-lock">
+                    <LockKeyhole size={24} />
+                    <strong>🔒 프리미엄에서 확인</strong>
+                  </div>
+                )}
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+              <div className="portfolio-tech-row">
+                {item.tech.map((tech) => (
+                  <span key={tech}>{tech}</span>
+                ))}
+              </div>
+              <time>{item.date}</time>
+            </article>
+          ))}
+        </div>
+      </section>
     </section>
   );
 }
