@@ -33,7 +33,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 
 type Insight = {
   target: {
@@ -123,6 +123,32 @@ type Insight = {
   }>;
 };
 
+type DeepReport = {
+  generatedAt: string;
+  model: string;
+  executiveSummary: string;
+  benchmarkInsights: Array<{
+    title: string;
+    detail: string;
+    scoreImpact: string;
+  }>;
+  portfolioPriorities: Array<{
+    title: string;
+    why: string;
+    nextStep: string;
+  }>;
+  activityMix: Array<{
+    name: string;
+    reason: string;
+    confidence: string;
+  }>;
+  curriculumRecommendations: string[];
+  riskNotes: string[];
+  sources: string[];
+};
+
+type DeepReportStatus = "idle" | "loading" | "ready" | "error";
+
 type Step =
   | "landing"
   | "analyzing"
@@ -152,7 +178,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const LOGIN_STORAGE_KEY = "career-scope-logged-in";
 const FIELD_STORAGE_KEY = "career-scope-selected-field";
 const CURRENT_USER_ID = "user-current";
+const DEFAULT_DEMO_SCHOOL = "경기대학교";
+const DEFAULT_DEMO_DEPARTMENT = "컴퓨터공학전공";
 const schoolOptions = [
+  "경기대학교",
   "인하대학교",
   "서울대학교",
   "연세대학교",
@@ -161,11 +190,11 @@ const schoolOptions = [
   "아주대학교",
   "인천대학교",
   "가천대학교",
-  "경기대학교",
   "용인대학교",
 ];
 const majorOptions = [
   "컴퓨터공학과",
+  "컴퓨터공학전공",
   "소프트웨어학과",
   "컴퓨터학과",
   "컴퓨터과학과",
@@ -176,22 +205,50 @@ const majorOptions = [
   "전자공학과",
   "산업공학과",
 ];
+const schoolMajorOptions: Record<string, string[]> = {
+  인하대학교: ["컴퓨터공학과", "인공지능공학과", "데이터사이언스학과", "정보통신공학과"],
+  서울대학교: ["컴퓨터공학과", "컴퓨터공학부", "전기정보공학부"],
+  연세대학교: ["컴퓨터과학과", "인공지능학과", "소프트웨어학부"],
+  고려대학교: ["컴퓨터학과", "데이터과학과", "스마트보안학부"],
+  한양대학교: ["컴퓨터소프트웨어학부", "데이터사이언스학부", "정보시스템학과"],
+  아주대학교: ["소프트웨어학과", "사이버보안학과", "인공지능융합학과"],
+  인천대학교: ["인공지능학과", "컴퓨터공학부", "정보통신공학과"],
+  가천대학교: ["데이터사이언스학과", "컴퓨터공학전공", "소프트웨어전공"],
+  경기대학교: ["컴퓨터공학전공", "컴퓨터공학과", "인공지능전공", "산업경영공학과"],
+  용인대학교: ["전자공학과", "컴퓨터과학전공", "AI융합학부"],
+};
 const careerFieldOptions = [
-  "백엔드",
-  "프론트엔드",
-  "AI/ML",
-  "데이터분석",
-  "알고리즘",
-  "시스템",
-  "보안",
-  "모바일",
-  "클라우드",
-  "인턴 준비",
-  "공모전",
-  "해커톤",
-  "오픈소스",
-  "창업 지향",
+  "웹/앱 개발 (Web/App)",
+  "인공지능 (AI)",
+  "데이터베이스 (DB)",
+  "네트워크 (Network)",
+  "임베디드 (Embedded)",
+  "컴퓨터 그래픽스 (Graphics)",
+  "정보보호 및 사이버 보안 (Security)",
+  "클라우드 컴퓨팅 (Cloud)",
+  "시스템 소프트웨어 (System)",
+  "데이터 과학 및 빅데이터 (Data Science)",
+  "소프트웨어 공학 (Software Engineering)",
+  "게임 개발 (Game)",
+  "HCI (인간-컴퓨터 상호작용)",
+  "블록체인 (Blockchain)",
 ];
+const legacyCareerFieldMap: Record<string, string> = {
+  백엔드: "웹/앱 개발 (Web/App)",
+  프론트엔드: "웹/앱 개발 (Web/App)",
+  모바일: "웹/앱 개발 (Web/App)",
+  "AI/ML": "인공지능 (AI)",
+  데이터분석: "데이터 과학 및 빅데이터 (Data Science)",
+  알고리즘: "소프트웨어 공학 (Software Engineering)",
+  시스템: "시스템 소프트웨어 (System)",
+  보안: "정보보호 및 사이버 보안 (Security)",
+  클라우드: "클라우드 컴퓨팅 (Cloud)",
+  오픈소스: "소프트웨어 공학 (Software Engineering)",
+  "인턴 준비": "소프트웨어 공학 (Software Engineering)",
+  공모전: "소프트웨어 공학 (Software Engineering)",
+  해커톤: "소프트웨어 공학 (Software Engineering)",
+  "창업 지향": "소프트웨어 공학 (Software Engineering)",
+};
 
 type DummyStudent = {
   id: string;
@@ -202,20 +259,20 @@ type DummyStudent = {
 };
 
 const dummyStudents: DummyStudent[] = [
-  { id: "stu-1", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "알고리즘", "데이터분석"] },
-  { id: "stu-2", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "시스템", "인턴 준비"] },
-  { id: "stu-3", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "AI/ML", "오픈소스"] },
-  { id: "stu-4", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "보안", "해커톤"] },
-  { id: "stu-5", school: "연세대학교", major: "컴퓨터과학과", curriculum: "컴퓨터공학과", fields: ["백엔드", "클라우드", "공모전"] },
-  { id: "stu-6", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["백엔드", "시스템", "보안"] },
-  { id: "stu-7", school: "아주대학교", major: "소프트웨어학과", curriculum: "소프트웨어학과", fields: ["프론트엔드", "해커톤", "창업 지향"] },
-  { id: "stu-8", school: "인천대학교", major: "인공지능학과", curriculum: "인공지능학과", fields: ["AI/ML", "데이터분석", "공모전"] },
-  { id: "stu-9", school: "가천대학교", major: "데이터사이언스학과", curriculum: "데이터사이언스학과", fields: ["데이터분석", "AI/ML", "인턴 준비"] },
-  { id: "stu-10", school: "경기대학교", major: "정보보호학과", curriculum: "정보보호학과", fields: ["보안", "시스템", "오픈소스"] },
-  { id: "stu-11", school: "용인대학교", major: "전자공학과", curriculum: "전자공학과", fields: ["모바일", "시스템", "창업 지향"] },
-  { id: "stu-12", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["알고리즘", "백엔드", "공모전"] },
-  { id: "stu-13", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["알고리즘", "백엔드", "오픈소스"] },
-  { id: "stu-14", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["모바일", "백엔드", "클라우드"] },
+  { id: "stu-1", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "소프트웨어 공학 (Software Engineering)", "데이터 과학 및 빅데이터 (Data Science)"] },
+  { id: "stu-2", school: "인하대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "시스템 소프트웨어 (System)", "데이터베이스 (DB)"] },
+  { id: "stu-3", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "인공지능 (AI)", "소프트웨어 공학 (Software Engineering)"] },
+  { id: "stu-4", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "정보보호 및 사이버 보안 (Security)", "네트워크 (Network)"] },
+  { id: "stu-5", school: "연세대학교", major: "컴퓨터과학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "클라우드 컴퓨팅 (Cloud)", "데이터베이스 (DB)"] },
+  { id: "stu-6", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "시스템 소프트웨어 (System)", "정보보호 및 사이버 보안 (Security)"] },
+  { id: "stu-7", school: "아주대학교", major: "소프트웨어학과", curriculum: "소프트웨어학과", fields: ["웹/앱 개발 (Web/App)", "HCI (인간-컴퓨터 상호작용)", "소프트웨어 공학 (Software Engineering)"] },
+  { id: "stu-8", school: "인천대학교", major: "인공지능학과", curriculum: "인공지능학과", fields: ["인공지능 (AI)", "데이터 과학 및 빅데이터 (Data Science)", "컴퓨터 그래픽스 (Graphics)"] },
+  { id: "stu-9", school: "가천대학교", major: "데이터사이언스학과", curriculum: "데이터사이언스학과", fields: ["데이터 과학 및 빅데이터 (Data Science)", "인공지능 (AI)", "데이터베이스 (DB)"] },
+  { id: "stu-10", school: "경기대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["웹/앱 개발 (Web/App)", "시스템 소프트웨어 (System)", "네트워크 (Network)"] },
+  { id: "stu-11", school: "용인대학교", major: "전자공학과", curriculum: "전자공학과", fields: ["임베디드 (Embedded)", "시스템 소프트웨어 (System)", "네트워크 (Network)"] },
+  { id: "stu-12", school: "서울대학교", major: "컴퓨터공학과", curriculum: "컴퓨터공학과", fields: ["소프트웨어 공학 (Software Engineering)", "웹/앱 개발 (Web/App)", "게임 개발 (Game)"] },
+  { id: "stu-13", school: "고려대학교", major: "컴퓨터학과", curriculum: "컴퓨터공학과", fields: ["블록체인 (Blockchain)", "웹/앱 개발 (Web/App)", "네트워크 (Network)"] },
+  { id: "stu-14", school: "한양대학교", major: "컴퓨터소프트웨어학부", curriculum: "컴퓨터공학과", fields: ["컴퓨터 그래픽스 (Graphics)", "웹/앱 개발 (Web/App)", "클라우드 컴퓨팅 (Cloud)"] },
 ];
 
 const curriculumComparisonRows = [
@@ -281,8 +338,8 @@ const notificationSettings: Array<{ label: string; icon: LucideIcon; checked: bo
 
 const fallbackInsight: Insight = {
   target: {
-    school: "인하대학교",
-    department: "컴퓨터공학과",
+    school: DEFAULT_DEMO_SCHOOL,
+    department: DEFAULT_DEMO_DEPARTMENT,
     track: "컴퓨터공학/소프트웨어 계열",
   },
   headline: "컴퓨터공학과 학생 중 실전 프로젝트 경험이 빠르게 격차를 만드는 구간이에요.",
@@ -327,8 +384,8 @@ const fallbackInsight: Insight = {
   ],
   curriculumSimilarity: {
     base: {
-      school: "인하대",
-      department: "컴퓨터공학과",
+      school: DEFAULT_DEMO_SCHOOL,
+      department: DEFAULT_DEMO_DEPARTMENT,
       courseCount: 47,
       filters: {},
     },
@@ -410,12 +467,12 @@ const fallbackInsight: Insight = {
   peers: [
     {
       id: "peer-1",
-      name: "백엔드 지망 3학년",
+      name: "웹/앱 개발 지망 3학년",
       schoolHidden: "서울권 주요 대학",
       avatar: "/assets/peer-profile-1.webp",
       intro: "분산 시스템과 API 설계에 관심이 많고, 팀 프로젝트 경험을 같이 쌓을 사람을 찾고 있어요.",
       portfolio: "github.com/demo/backend-student",
-      tags: ["백엔드", "인턴 준비", "API"],
+      tags: ["웹/앱 개발 (Web/App)", "데이터베이스 (DB)", "API"],
     },
     {
       id: "peer-2",
@@ -424,21 +481,21 @@ const fallbackInsight: Insight = {
       avatar: "/assets/peer-profile-2.webp",
       intro: "데이터 분석 공모전과 해커톤을 같이 나갈 컴공 계열 동료를 찾고 있어요.",
       portfolio: "notion.site/demo-ai-builder",
-      tags: ["AI", "해커톤", "공모전"],
+      tags: ["인공지능 (AI)", "데이터 과학 및 빅데이터 (Data Science)", "HCI (인간-컴퓨터 상호작용)"],
     },
   ],
 };
 
 export default function Home() {
   const [step, setStep] = useState<Step>("landing");
-  const [school, setSchool] = useState("인하대학교");
-  const [department, setDepartment] = useState("컴퓨터공학과");
-  const [field, setField] = useState("백엔드");
+  const [school, setSchool] = useState(DEFAULT_DEMO_SCHOOL);
+  const [department, setDepartment] = useState(DEFAULT_DEMO_DEPARTMENT);
+  const [field, setField] = useState("");
   const [insight, setInsight] = useState<Insight | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profileName, setProfileName] = useState("김하늘");
   const [introLength, setIntroLength] = useState(43);
-  const [signupField, setSignupField] = useState("백엔드");
+  const [signupField, setSignupField] = useState("");
   const [matchingDistance, setMatchingDistance] = useState<MatchingDistance>("balanced");
   const [portfolioEntries, setPortfolioEntries] = useState<PortfolioEntry[]>([
     { id: 1, category: "프로젝트", title: "", description: "" },
@@ -447,6 +504,7 @@ export default function Home() {
     useState<PortfolioStats>(defaultPortfolioStats);
 
   const activeInsight = insight || fallbackInsight;
+  const majorSuggestions = useMemo(() => getMajorOptionsForSchool(school), [school]);
   const schoolComparison = useMemo(
     () => buildSchoolMajorComparison(school, department, field),
     [school, department, field],
@@ -468,9 +526,10 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const view = params.get("view");
       const storedField = window.sessionStorage.getItem(FIELD_STORAGE_KEY);
-      const selectedSchool = params.get("school") || "인하대학교";
-      const selectedMajor = params.get("major") || "컴퓨터공학과";
-      const selectedField = params.get("field") || storedField || "백엔드";
+      const selectedSchool = params.get("school") || DEFAULT_DEMO_SCHOOL;
+      const selectedMajor = params.get("major") || DEFAULT_DEMO_DEPARTMENT;
+      const rawField = params.get("field") || storedField;
+      const selectedField = rawField ? normalizeCareerField(rawField) : "";
 
       setSchool(selectedSchool);
       setDepartment(selectedMajor);
@@ -546,24 +605,32 @@ export default function Home() {
   }
 
   async function handleAnalyze() {
+    if (!field) {
+      return;
+    }
+
     setStep("analyzing");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     const delay = new Promise((resolve) => window.setTimeout(resolve, 4500));
-    const selectedField = field || careerFieldOptions[0];
+    const selectedSchool = resolveSchoolOption(school);
+    const selectedDepartment = resolveMajorOption(department, getMajorOptionsForSchool(selectedSchool));
+    const selectedField = field;
+    setSchool(selectedSchool);
+    setDepartment(selectedDepartment);
     window.sessionStorage.setItem(FIELD_STORAGE_KEY, selectedField);
     const landingParams = new URLSearchParams({
-      school,
-      major: department,
+      school: selectedSchool,
+      major: selectedDepartment,
       field: selectedField,
     });
     window.history.replaceState(null, "", `/?${landingParams.toString()}`);
 
     try {
       const query = new URLSearchParams({
-        school,
-        major: department,
-        department,
+        school: selectedSchool,
+        major: selectedDepartment,
+        department: selectedDepartment,
         field: selectedField,
       }).toString();
       const [response] = await Promise.all([
@@ -578,7 +645,7 @@ export default function Home() {
     } catch {
       setInsight({
         ...fallbackInsight,
-        target: { ...fallbackInsight.target, school, department },
+        target: { ...fallbackInsight.target, school: selectedSchool, department: selectedDepartment },
       });
       await delay;
     } finally {
@@ -593,7 +660,7 @@ export default function Home() {
     const payload = {
       school,
       department,
-      email: "student@inha.edu",
+      email: "student@kyonggi.ac.kr",
       name: "김하늘",
       role: String(form.get("role") || signupField),
       interest: signupField,
@@ -688,28 +755,31 @@ export default function Home() {
           </div>
 
           <div className="analyze-panel" aria-label="커리어 분석 입력">
-            <CustomDropdown
+            <AutocompleteInput
               icon="🏫"
               label="학교"
-              placeholder="학교를 선택하세요"
+              placeholder="예: 경기, 경기대, 경기대학교"
               value={school}
               options={schoolOptions}
-              popularOptions={["인하대학교", "서울대학교", "연세대학교"]}
-              onChange={setSchool}
+              popularOptions={[DEFAULT_DEMO_SCHOOL, "인하대학교", "서울대학교"]}
+              onChange={(nextSchool) => {
+                setSchool(nextSchool);
+                const nextMajorOptions = getMajorOptionsForSchool(nextSchool);
+                if (department && !nextMajorOptions.includes(department)) {
+                  setDepartment("");
+                }
+              }}
             />
 
-            <CustomDropdown
+            <AutocompleteInput
               icon="📚"
               label="학과"
-              placeholder="학과를 선택하세요"
+              placeholder="예: 컴퓨터, 컴공, 소프트웨어"
               value={department}
-              options={majorOptions}
-              popularOptions={["컴퓨터공학과", "소프트웨어학과", "인공지능학과"]}
+              options={majorSuggestions}
+              popularOptions={majorSuggestions.slice(0, 3)}
               onChange={(nextDepartment) => {
                 setDepartment(nextDepartment);
-                if (!field) {
-                  selectField(careerFieldOptions[0]);
-                }
               }}
             />
 
@@ -720,7 +790,11 @@ export default function Home() {
               onChange={selectField}
             />
 
-            <button className="primary-cta" onClick={handleAnalyze}>
+            <button
+              className="primary-cta"
+              disabled={!school.trim() || !department.trim() || !field}
+              onClick={handleAnalyze}
+            >
               <TrendingUp size={24} />
               커리어 분석 시작하기
               <ArrowRight className="cta-arrow" size={22} />
@@ -830,7 +904,6 @@ export default function Home() {
               major={department}
               field={field}
               schoolComparison={schoolComparison}
-              onDeepDive={openCompareFlow}
             />
 
             <section className="locked-report result-lock">
@@ -979,6 +1052,7 @@ export default function Home() {
 
       {step === "dashboard" && (
         <AppDashboard
+          field={field}
           insight={activeInsight}
           profileName={profileName}
           portfolioStats={profilePortfolioStats}
@@ -1038,11 +1112,13 @@ function Header({
 }
 
 function AppDashboard({
+  field,
   insight,
   profileName,
   portfolioStats,
   onLogout,
 }: {
+  field: string;
   insight: Insight;
   profileName: string;
   portfolioStats: PortfolioStats;
@@ -1056,7 +1132,9 @@ function AppDashboard({
     const tab = new URLSearchParams(window.location.search).get("tab");
     return isDashboardTab(tab) ? tab : "home";
   });
-  const [showPaymentDemo, setShowPaymentDemo] = useState(false);
+  const [deepReport, setDeepReport] = useState<DeepReport | null>(null);
+  const [deepReportStatus, setDeepReportStatus] = useState<DeepReportStatus>("idle");
+  const [deepReportError, setDeepReportError] = useState("");
   const [showOperatorNotice, setShowOperatorNotice] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [activeMessagePeer, setActiveMessagePeer] = useState<Insight["peers"][number] | null>(
@@ -1165,6 +1243,50 @@ function AppDashboard({
     url.searchParams.set("tab", "profile");
     url.searchParams.set("profileUserId", peerId);
     window.history.replaceState(null, "", url);
+  }
+
+  async function unlockDeepReport() {
+    if (deepReportStatus === "loading") {
+      return;
+    }
+
+    setDeepReportStatus("loading");
+    setDeepReportError("");
+
+    try {
+      const response = await fetch(`${API_URL}/api/deep-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          school: insight.target.school,
+          department: insight.target.department,
+          headline: insight.headline,
+          summary: insight.summary,
+          activities: insight.activities,
+          comparisons: insight.comparisons,
+          curriculum: insight.curriculum,
+          field,
+          portfolioStats,
+          analysis: insight.analysis,
+          curriculumSimilarity: insight.curriculumSimilarity,
+        }),
+      });
+      const payload = (await response.json()) as DeepReport | { error?: string };
+
+      if (!response.ok) {
+        throw new Error("error" in payload && payload.error ? payload.error : "심화 리포트 생성에 실패했습니다.");
+      }
+
+      setDeepReport(payload as DeepReport);
+      setDeepReportStatus("ready");
+    } catch (error) {
+      setDeepReportStatus("error");
+      setDeepReportError(
+        error instanceof Error && error.message !== "Load failed"
+          ? error.message
+          : "API 서버에 연결하지 못했습니다. 서버 실행 상태와 CORS 설정을 확인해주세요.",
+      );
+    }
   }
 
   return (
@@ -1348,7 +1470,7 @@ function AppDashboard({
                 <strong>{stat.value}</strong>
               </div>
               <footer>
-                <span>{stat.rank}</span>
+                <span className={getStatRankTone(stat.rank)}>{stat.rank}</span>
                 <small className={stat.deltaTone}>{stat.delta}</small>
               </footer>
               <svg
@@ -1427,7 +1549,14 @@ function AppDashboard({
         )}
 
         {activeTab === "report" && (
-          <DashboardReportPage insight={insight} onUnlock={() => setShowPaymentDemo(true)} />
+          <DashboardReportPage
+            deepReport={deepReport}
+            deepReportError={deepReportError}
+            deepReportStatus={deepReportStatus}
+            field={field}
+            insight={insight}
+            onUnlock={unlockDeepReport}
+          />
         )}
         {activeTab === "networking" && (
           <NetworkingPage
@@ -1448,15 +1577,6 @@ function AppDashboard({
         )}
         {activeTab === "settings" && <SettingsPage />}
 
-        {showPaymentDemo && (
-          <div className="demo-payment-toast" role="status">
-            <strong>데모 결제 화면입니다</strong>
-            <span>실제 결제 없이 4,900원 심화 리포트 해제 흐름을 시연합니다.</span>
-            <button onClick={() => setShowPaymentDemo(false)} type="button">
-              확인
-            </button>
-          </div>
-        )}
         <MessageChatModal
           draft={messageDraft}
           messages={activeMessagePeer ? messageThreads[activeMessagePeer.id] || [] : []}
@@ -1471,9 +1591,17 @@ function AppDashboard({
 }
 
 function DashboardReportPage({
+  deepReport,
+  deepReportError,
+  deepReportStatus,
+  field,
   insight,
   onUnlock,
 }: {
+  deepReport: DeepReport | null;
+  deepReportError: string;
+  deepReportStatus: DeepReportStatus;
+  field: string;
   insight: Insight;
   onUnlock: () => void;
 }) {
@@ -1491,6 +1619,10 @@ function DashboardReportPage({
           </div>
           <strong>무료</strong>
         </div>
+
+        <p className="report-target-line">
+          분석 대상: {insight.target.school} {insight.target.department} · {field}
+        </p>
 
         <div className="report-free-grid">
           <div className="report-score-tile">
@@ -1539,12 +1671,31 @@ function DashboardReportPage({
         </article>
       </section>
 
-      <DeepReportPreview onUnlock={onUnlock} />
+      <DeepReportPreview
+        error={deepReportError}
+        onUnlock={onUnlock}
+        report={deepReport}
+        status={deepReportStatus}
+      />
     </section>
   );
 }
 
-function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
+function DeepReportPreview({
+  error,
+  onUnlock,
+  report,
+  status,
+}: {
+  error: string;
+  onUnlock: () => void;
+  report: DeepReport | null;
+  status: DeepReportStatus;
+}) {
+  if (status === "ready" && report) {
+    return <DeepReportResult report={report} />;
+  }
+
   return (
     <section className="compare-preview-page">
       <div className="compare-hero-copy">
@@ -1636,10 +1787,18 @@ function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
                 맞춤 커리큘럼 추천
               </li>
             </ul>
-            <small className="unlock-note">1회 구매 · 환불 불가</small>
-            <button onClick={onUnlock} type="button">
-              <span aria-hidden="true">🔓</span>
-              심화 리포트 잠금 해제하기 · 4,900원
+            {status === "error" && (
+              <p className="deep-report-error" role="alert">
+                {error}
+              </p>
+            )}
+            <small className="unlock-note">
+              Gemini API로 커리큘럼 비교 데이터를 실시간 분석합니다.
+            </small>
+            <button disabled={status === "loading"} onClick={onUnlock} type="button">
+              {status === "loading"
+                ? "Gemini가 심화 리포트 생성 중"
+                : "심화 리포트 생성하기 · 4,900원"}
             </button>
           </div>
         </article>
@@ -1650,6 +1809,113 @@ function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
         모든 데이터는 익명으로 처리되며, 개인정보는 안전하게 보호됩니다.
       </p>
     </section>
+  );
+}
+
+function DeepReportResult({ report }: { report: DeepReport }) {
+  return (
+    <section className="deep-report-result">
+      <div className="deep-report-header">
+        <span>
+          <CheckCircle2 size={18} />
+          Gemini 생성 완료
+        </span>
+        <div>
+          <h2>심화 리포트가 열렸어요</h2>
+          <p>{report.executiveSummary}</p>
+        </div>
+        <small>
+          {report.model} · {new Date(report.generatedAt).toLocaleString("ko-KR")}
+        </small>
+      </div>
+
+      <div className="deep-report-grid">
+        <DeepReportSection
+          icon={BarChart3}
+          items={report.benchmarkInsights.map((item) => ({
+            title: item.title,
+            body: item.detail,
+            meta: item.scoreImpact,
+          }))}
+          title="비교군 인사이트"
+        />
+        <DeepReportSection
+          icon={Target}
+          items={report.portfolioPriorities.map((item) => ({
+            title: item.title,
+            body: item.why,
+            meta: item.nextStep,
+          }))}
+          title="포트폴리오 우선순위"
+        />
+        <DeepReportSection
+          icon={Trophy}
+          items={report.activityMix.map((item) => ({
+            title: item.name,
+            body: item.reason,
+            meta: `확신도 ${item.confidence}`,
+          }))}
+          title="추천 활동 조합"
+        />
+      </div>
+
+      <div className="deep-report-bottom">
+        <article>
+          <h3>커리큘럼 추천</h3>
+          <ul>
+            {report.curriculumRecommendations.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+        <article>
+          <h3>주의할 점</h3>
+          <ul>
+            {report.riskNotes.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+        {report.sources.length > 0 && (
+          <article>
+            <h3>분석 근거</h3>
+            <ul>
+              {report.sources.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DeepReportSection({
+  icon: Icon,
+  items,
+  title,
+}: {
+  icon: LucideIcon;
+  items: Array<{ title: string; body: string; meta: string }>;
+  title: string;
+}) {
+  return (
+    <article className="deep-report-section">
+      <div className="section-title">
+        <Icon size={22} />
+        <h3>{title}</h3>
+      </div>
+      <div className="deep-report-list">
+        {items.map((item) => (
+          <div key={item.title}>
+            <strong>{item.title}</strong>
+            <p>{item.body}</p>
+            <small>{item.meta}</small>
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -1669,11 +1935,11 @@ function NetworkingPage({
     matchScore: [92, 88, 84, 81, 78][index] || 76,
     intent: ["해커톤 팀빌딩", "공모전 동료", "포트폴리오 피드백", "사이드프로젝트", "커피챗"][index] || "협업",
     note: [
-      "백엔드와 API 관심사가 겹치고 인턴 준비 단계가 비슷합니다.",
-      "AI/해커톤/공모전 태그가 함께 잡혀 팀 구성 가능성이 높습니다.",
-      "알고리즘과 시스템 역량을 서로 보완할 수 있습니다.",
+      "웹/앱 개발과 API 관심사가 겹치고 프로젝트 준비 단계가 비슷합니다.",
+      "인공지능과 데이터 과학 관심사가 함께 잡혀 팀 구성 가능성이 높습니다.",
+      "소프트웨어 공학과 시스템 소프트웨어 역량을 서로 보완할 수 있습니다.",
       "데이터 분석 경험을 같이 확장하기 좋은 프로필입니다.",
-      "서비스 기획과 백엔드 협업 목표가 맞물립니다.",
+      "HCI와 웹/앱 개발 협업 목표가 맞물립니다.",
     ][index] || "관심 분야와 활동 목표가 가깝습니다.",
   }));
   const filteredPeers =
@@ -2433,13 +2699,11 @@ function FieldComparisonReport({
   major,
   field,
   schoolComparison,
-  onDeepDive,
 }: {
   school: string;
   major: string;
   field: string;
   schoolComparison: SchoolMajorComparison;
-  onDeepDive: () => void;
 }) {
   return (
     <div className="field-report">
@@ -2507,18 +2771,6 @@ function FieldComparisonReport({
           ))}
         </div>
       </section>
-
-      <section className="ai-insight-box">
-        <p>
-          {field} 분야를 희망하는 학생 기준, 우리 학교는 알고리즘/자료구조 과목이
-          강점이나 AI/머신러닝 및 보안 과목 보강이 필요합니다. 관련 온라인 강의나
-          스터디 참여를 추천합니다.
-        </p>
-        <button type="button" onClick={onDeepDive}>
-          같은 분야 학생들과 비교하기
-          <ArrowRight size={18} />
-        </button>
-      </section>
     </div>
   );
 }
@@ -2580,12 +2832,12 @@ function SubjectComparisonRow({
 const dashboardExtraPeers: Insight["peers"] = [
   {
     id: "peer-extra-1",
-    name: "알고리즘형 동료",
+    name: "시스템형 동료",
     schoolHidden: "한양대 컴퓨터공학과",
     avatar: "/assets/peer-profile-3.webp",
-    intro: "알고리즘과 시스템 설계에 관심이 많아요.",
+    intro: "시스템 소프트웨어와 보안 설계에 관심이 많아요.",
     portfolio: "demo",
-    tags: ["알고리즘", "시스템", "보안"],
+    tags: ["시스템 소프트웨어 (System)", "정보보호 및 사이버 보안 (Security)", "네트워크 (Network)"],
   },
   {
     id: "peer-extra-2",
@@ -2594,16 +2846,16 @@ const dashboardExtraPeers: Insight["peers"] = [
     avatar: "/assets/peer-profile-4.webp",
     intro: "데이터 분석과 Python 프로젝트를 준비 중이에요.",
     portfolio: "demo",
-    tags: ["AI/ML", "데이터분석", "Python"],
+    tags: ["인공지능 (AI)", "데이터 과학 및 빅데이터 (Data Science)", "Python"],
   },
   {
     id: "peer-extra-3",
-    name: "서비스 기획형 동료",
+    name: "웹/앱 기획형 동료",
     schoolHidden: "성균관대 소프트웨어학과",
     avatar: "/assets/peer-profile-5.webp",
-    intro: "모바일 서비스와 백엔드 협업을 좋아해요.",
+    intro: "웹/앱 서비스와 HCI 기반 협업을 좋아해요.",
     portfolio: "demo",
-    tags: ["모바일", "백엔드", "Firebase"],
+    tags: ["웹/앱 개발 (Web/App)", "HCI (인간-컴퓨터 상호작용)", "Firebase"],
   },
 ];
 
@@ -2615,6 +2867,93 @@ function getMatchBadgeTone(rate: number) {
     return "match-mid";
   }
   return "match-low";
+}
+
+function getStatRankTone(rank: string) {
+  const percentile = Number(rank.match(/\d+/)?.[0] || 100);
+
+  if (percentile <= 60) {
+    return "rank-good";
+  }
+
+  if (percentile <= 70) {
+    return "rank-watch";
+  }
+
+  return "rank-risk";
+}
+
+function normalizeCareerField(field?: string | null) {
+  if (!field) {
+    return careerFieldOptions[0];
+  }
+
+  if (careerFieldOptions.includes(field)) {
+    return field;
+  }
+
+  return legacyCareerFieldMap[field] || careerFieldOptions[0];
+}
+
+function getMajorOptionsForSchool(schoolInput: string) {
+  const resolvedSchool = resolveSchoolOption(schoolInput);
+  return getUniqueOptions([...(schoolMajorOptions[resolvedSchool] || []), ...majorOptions]);
+}
+
+function resolveSchoolOption(input: string) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return schoolOptions[0];
+  }
+
+  return (
+    schoolOptions.find((option) => option === trimmed) ||
+    schoolOptions.find((option) => optionMatchesQuery(option, trimmed)) ||
+    trimmed
+  );
+}
+
+function resolveMajorOption(input: string, options: string[]) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return options[0] || majorOptions[0];
+  }
+
+  return (
+    options.find((option) => option === trimmed) ||
+    options.find((option) => optionMatchesQuery(option, trimmed)) ||
+    trimmed
+  );
+}
+
+function getAutocompleteMatches(query: string, options: string[]) {
+  const uniqueOptions = getUniqueOptions(options);
+  if (!query.trim()) {
+    return uniqueOptions;
+  }
+
+  return uniqueOptions.filter((option) => optionMatchesQuery(option, query));
+}
+
+function optionMatchesQuery(option: string, query: string) {
+  const normalizedQuery = normalizeSearchText(query).replace("컴공", "컴퓨터공학");
+  const aliases = [
+    option,
+    option.replace("대학교", "대"),
+    option.replace("대학교", ""),
+    option.replace("학과", ""),
+    option.replace("전공", ""),
+  ].map(normalizeSearchText);
+
+  return aliases.some((alias) => alias.includes(normalizedQuery));
+}
+
+function normalizeSearchText(value: string) {
+  return value.toLowerCase().replace(/[\s()/-]/g, "");
+}
+
+function getUniqueOptions(options: string[]) {
+  return Array.from(new Set(options));
 }
 
 function getNetworkFilterCopy(selectedTags: string[]) {
@@ -2632,7 +2971,7 @@ function getNetworkFilterCopy(selectedTags: string[]) {
     template:
       selectedTags.length > 0
         ? `“${selectedTags[0]} 관심사가 보여 연락드려요. 서로의 경험을 나누며 같이 성장해보고 싶습니다.”`
-        : "“같은 백엔드 관심사라 연락드려요. 이번 해커톤에서 API 설계와 배포를 같이 맡아볼 동료를 찾고 있습니다.”",
+        : "“같은 웹/앱 개발 관심사라 연락드려요. 이번 프로젝트에서 API 설계와 배포를 같이 맡아볼 동료를 찾고 있습니다.”",
   };
 }
 
@@ -2671,12 +3010,11 @@ function getProfileTagTone(tag: string) {
   return "tag-etc";
 }
 
-function CustomDropdown({
+function AutocompleteInput({
   icon,
   label,
   placeholder,
   value,
-  displayValue,
   options,
   popularOptions,
   onChange,
@@ -2685,14 +3023,18 @@ function CustomDropdown({
   label: string;
   placeholder: string;
   value: string;
-  displayValue?: string;
   options: string[];
   popularOptions: string[];
   onChange: (value: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const listboxId = useId();
   const selectRef = useRef<HTMLDivElement>(null);
-  const selectedText = displayValue || value;
+  const query = value.trim();
+  const suggestions = getAutocompleteMatches(value, options);
+  const quickOptions = getUniqueOptions(popularOptions).filter((option) =>
+    options.includes(option),
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -2725,50 +3067,76 @@ function CustomDropdown({
   }
 
   return (
-    <div className={`custom-select ${isOpen ? "open" : ""}`} ref={selectRef}>
-      <button
-        className={`custom-select-trigger ${selectedText ? "selected" : ""}`}
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-      >
+    <div className={`autocomplete-select ${isOpen ? "open" : ""}`} ref={selectRef}>
+      <label className={`autocomplete-trigger ${value ? "selected" : ""}`}>
         <span className="custom-select-label">
           <span className="custom-select-icon" aria-hidden="true">
             {icon}
           </span>
           <span>{label}</span>
         </span>
-        <span className="custom-select-value">{selectedText || placeholder}</span>
+        <input
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-expanded={isOpen}
+          aria-label={label}
+          autoComplete="off"
+          onChange={(event) => {
+            onChange(event.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && suggestions[0]) {
+              event.preventDefault();
+              selectOption(suggestions[0]);
+            }
+          }}
+          placeholder={placeholder}
+          role="combobox"
+          value={value}
+        />
         <ChevronDown className="custom-select-chevron" size={20} />
-      </button>
+      </label>
 
       {isOpen && (
-        <div className="custom-select-menu" role="listbox" aria-label={label}>
-          <div className="popular-options" aria-label="인기 옵션">
-            {popularOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={option === selectedText ? "active" : ""}
-                onClick={() => selectOption(option)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
+        <div
+          className="custom-select-menu autocomplete-menu"
+          id={listboxId}
+          role="listbox"
+          aria-label={label}
+        >
+          {!query && quickOptions.length > 0 && (
+            <div className="popular-options" aria-label="추천 옵션">
+              {quickOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={option === value ? "active" : ""}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectOption(option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="select-option-list">
-            {options.map((option) => (
+            {suggestions.map((option) => (
               <button
                 key={option}
                 type="button"
                 role="option"
-                aria-selected={option === selectedText}
+                aria-selected={option === value}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectOption(option)}
               >
                 {option}
               </button>
             ))}
+            {suggestions.length === 0 && (
+              <span className="autocomplete-empty">유사한 항목이 없어요</span>
+            )}
           </div>
         </div>
       )}

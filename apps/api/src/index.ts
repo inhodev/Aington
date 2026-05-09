@@ -6,6 +6,7 @@ import {
   buildCurriculumSimilarityFromDatabase,
 } from "./data/curriculumSimilarity.js";
 import { buildCurriculumReport } from "./data/curriculumReport.js";
+import { buildGeminiDeepReport, GeminiReportError } from "./data/deepReport.js";
 import { buildInsight } from "./data/demo.js";
 import { prisma } from "./lib/prisma.js";
 import { Profile } from "./models/Profile.js";
@@ -15,10 +16,21 @@ dotenv.config();
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const memoryProfiles: unknown[] = [];
+const allowedWebOrigins = new Set([
+  process.env.WEB_ORIGIN || "http://localhost:3000",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
 
 app.use(
   cors({
-    origin: process.env.WEB_ORIGIN || "http://localhost:3000",
+    origin(origin, callback) {
+      if (!origin || allowedWebOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
   }),
 );
 app.use(express.json());
@@ -88,8 +100,24 @@ app.get("/api/insights", async (req, res) => {
     ...options,
   });
   const curriculumReport = buildCurriculumReport(curriculumSimilarity);
+  const displayCurriculumSimilarity = {
+    ...curriculumSimilarity,
+    base: {
+      ...curriculumSimilarity.base,
+      school: insight.target.school,
+      department: insight.target.department,
+    },
+  };
+  const topComparison = curriculumSimilarity.rankings[0];
 
-  res.json({ ...insight, ...curriculumReport, curriculumSimilarity });
+  res.json({
+    ...insight,
+    ...curriculumReport,
+    headline: `${insight.target.school} ${insight.target.department}는 ${
+      topComparison?.school ?? "비교군"
+    }와 커리큘럼 구조가 가장 가깝습니다.`,
+    curriculumSimilarity: displayCurriculumSimilarity,
+  });
 });
 
 app.get("/api/curriculum-similarity", async (req, res) => {
@@ -111,6 +139,44 @@ app.get("/api/curriculum-similarity", async (req, res) => {
       yearTerm: yearTerm || undefined,
     }),
   );
+});
+
+app.post("/api/deep-report", async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const school = requireString(body, "school") || "";
+  const department = requireString(body, "department") || "";
+
+  if (!school || !department) {
+    return res.status(400).json({
+      error: "Missing required fields",
+      missing: [!school ? "school" : null, !department ? "department" : null].filter(Boolean),
+    });
+  }
+
+  try {
+    const report = await buildGeminiDeepReport({
+      school,
+      department,
+      field: typeof body.field === "string" ? body.field : undefined,
+      headline: typeof body.headline === "string" ? body.headline : undefined,
+      summary: typeof body.summary === "string" ? body.summary : undefined,
+      activities: body.activities,
+      comparisons: body.comparisons,
+      curriculum: body.curriculum,
+      portfolioStats: body.portfolioStats,
+      analysis: body.analysis,
+      curriculumSimilarity: body.curriculumSimilarity,
+    });
+
+    return res.json(report);
+  } catch (error) {
+    if (error instanceof GeminiReportError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+
+    console.error(error);
+    return res.status(500).json({ error: "Failed to generate deep report." });
+  }
 });
 
 app.post("/api/signup", async (req, res) => {

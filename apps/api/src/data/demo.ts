@@ -1,6 +1,6 @@
 export const demoInsight = {
   target: {
-    school: "인하대학교",
+    school: "경기대학교",
     department: "컴퓨터공학과",
     track: "컴퓨터공학/소프트웨어 계열",
   },
@@ -46,7 +46,7 @@ export const demoInsight = {
   ],
   curriculumSimilarity: {
     base: {
-      school: "인하대",
+      school: "경기대학교",
       department: "컴퓨터공학과",
       courseCount: 47,
       filters: {},
