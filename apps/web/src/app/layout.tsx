@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CareerScope",
+  title: "과연",
   description: "학교와 학과만으로 확인하는 전공 기반 커리어 인사이트",
 };
 

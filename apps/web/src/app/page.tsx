@@ -956,12 +956,17 @@ function Header({
     <header className="site-header">
       <button className="brand" onClick={onHome}>
         <span className="logo-mark">
-          <i />
-          <i />
-          <i />
+          <Image
+            src="/assets/gwayeon-logo.png"
+            alt=""
+            width={72}
+            height={79}
+            priority
+            unoptimized
+          />
         </span>
         <span>
-          <strong>CareerScope</strong>
+          <strong>과연</strong>
           <small>데이터로 설계하는 당신의 커리어</small>
         </span>
       </button>
@@ -1037,13 +1042,16 @@ function AppDashboard({
       <aside className="app-sidebar">
         <div className="app-sidebar-brand">
           <span className="logo-mark">
-            <i />
-            <i />
-            <i />
+            <Image
+              src="/assets/gwayeon-logo.png"
+              alt=""
+              width={58}
+              height={64}
+              priority
+              unoptimized
+            />
           </span>
-          <strong>
-            Career<span>Scope</span>
-          </strong>
+          <strong>과연</strong>
         </div>
 
         <nav className="app-nav" aria-label="메인 대시보드 메뉴">
@@ -1735,7 +1743,7 @@ function ProfilePage() {
           <article className="profile-panel skill-panel">
             <h3>핵심 역량</h3>
             <CompetencyRadar />
-            <p>5점 만점 기준 (CareerScope AI 분석)</p>
+            <p>5점 만점 기준 (과연 AI 분석)</p>
           </article>
 
           <article className="profile-panel activity-panel">

@@ -15,6 +15,14 @@
   --shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
 }
 
+@font-face {
+  font-family: "JalnanGothic";
+  src: url("/fonts/JalnanGothic.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -85,7 +93,7 @@ button {
   display: flex;
   align-items: center;
   gap: 16px;
-  min-width: 236px;
+  min-width: 190px;
   padding: 0;
   color: var(--foreground);
   background: transparent;
@@ -95,7 +103,13 @@ button {
 
 .brand strong {
   display: block;
+  font-family:
+    "JalnanGothic",
+    "Apple SD Gothic Neo",
+    "Noto Sans KR",
+    sans-serif;
   font-size: 27px;
+  font-weight: 400;
   line-height: 1.05;
 }
 
@@ -109,30 +123,17 @@ button {
 
 .logo-mark {
   display: grid;
-  grid-template-columns: repeat(3, 12px);
-  align-items: end;
-  gap: 6px;
+  place-items: center;
   width: 56px;
-  height: 50px;
+  height: 56px;
+  overflow: visible;
+  background: transparent;
 }
 
-.logo-mark i {
-  display: block;
-  width: 12px;
-  border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, #5665ff, var(--blue));
-}
-
-.logo-mark i:nth-child(1) {
-  height: 24px;
-}
-
-.logo-mark i:nth-child(2) {
-  height: 36px;
-}
-
-.logo-mark i:nth-child(3) {
-  height: 46px;
+.logo-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .site-header nav {
@@ -1978,22 +1979,19 @@ button {
 
 .app-sidebar-brand .logo-mark {
   width: 48px;
-  height: 42px;
-  grid-template-columns: repeat(3, 10px);
-}
-
-.app-sidebar-brand .logo-mark i {
-  width: 10px;
+  height: 48px;
 }
 
 .app-sidebar-brand strong {
   color: #111827;
-  font-size: 23px;
+  font-family:
+    "JalnanGothic",
+    "Apple SD Gothic Neo",
+    "Noto Sans KR",
+    sans-serif;
+  font-size: 26px;
+  font-weight: 400;
   letter-spacing: 0;
-}
-
-.app-sidebar-brand strong span {
-  color: var(--blue);
 }
 
 .app-nav {
@@ -5504,5 +5502,165 @@ button {
 
   .settings-row {
     grid-template-columns: 36px minmax(0, 1fr) 44px;
+  }
+}
+
+/* Feedback fixes */
+.stat-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-card::before {
+  display: none;
+}
+
+.stat-card strong {
+  color: #111827;
+}
+
+.stat-card footer span {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.stat-card footer small,
+.stat-card footer .positive,
+.stat-card footer .negative,
+.stat-card footer .neutral {
+  color: #64748b;
+}
+
+.stat-sparkline polyline {
+  stroke: #cbd5e1;
+  opacity: 1;
+}
+
+.profile-page {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 24px;
+}
+
+.profile-content,
+.profile-top-grid {
+  display: contents;
+}
+
+.profile-main-card,
+.profile-panel {
+  height: 100%;
+}
+
+.profile-main-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 24px 16px;
+}
+
+.skill-panel {
+  grid-column: 2;
+}
+
+.activity-panel {
+  grid-column: 3;
+}
+
+.profile-avatar-shell,
+.profile-large-avatar {
+  width: 80px;
+  height: 80px;
+}
+
+.profile-main-card h2 {
+  font-size: 18px;
+}
+
+.profile-tag-row {
+  gap: 6px;
+}
+
+.profile-tag-row span {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.profile-bio p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.profile-primary-button,
+.profile-secondary-button {
+  width: 100%;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+.portfolio-area {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.portfolio-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.portfolio-image-wrap {
+  aspect-ratio: 16 / 9;
+}
+
+.portfolio-card h3 {
+  font-size: 13px;
+}
+
+.portfolio-card p {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  .profile-page {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .activity-panel {
+    grid-column: 2;
+  }
+
+  .portfolio-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-page {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .profile-content,
+  .profile-top-grid {
+    display: grid;
+  }
+
+  .skill-panel,
+  .activity-panel,
+  .portfolio-area {
+    grid-column: 1;
+  }
+
+  .profile-avatar-shell,
+  .profile-large-avatar {
+    width: 96px;
+    height: 96px;
+  }
+
+  .portfolio-grid {
+    grid-template-columns: 1fr;
   }
 }
