@@ -2592,13 +2592,12 @@ button {
 }
 
 .peer-avatar {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 48px;
   height: 48px;
   margin: 0 auto 12px;
   object-fit: cover;
-  background: var(--avatar-color, #4f46e5);
+  background: #eef2ff;
   border: 0;
   border-radius: 9999px;
   box-shadow: 0 10px 24px rgba(21, 31, 54, 0.14);
@@ -5031,15 +5030,13 @@ button {
 }
 
 .networking-avatar {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 58px;
   height: 58px;
-  color: #fff;
-  background: var(--avatar-color);
+  object-fit: cover;
+  background: #eef2ff;
   border-radius: 9999px;
-  font-size: 22px;
-  font-weight: 700;
+  box-shadow: 0 12px 28px rgba(21, 31, 54, 0.14);
 }
 
 .networking-match {
@@ -5522,8 +5519,8 @@ button {
 }
 
 .stat-card footer span {
-  color: #64748b;
-  background: #f8fafc;
+  color: var(--stat-accent, #4f46e5);
+  background: color-mix(in srgb, var(--stat-accent, #4f46e5) 12%, #fff);
 }
 
 .stat-card footer small,

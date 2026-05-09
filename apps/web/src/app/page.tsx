@@ -122,6 +122,7 @@ type Insight = {
     id: string;
     name: string;
     schoolHidden: string;
+    avatar?: string;
     intro: string;
     portfolio: string;
     tags: string[];
@@ -355,6 +356,7 @@ const fallbackInsight: Insight = {
       id: "peer-1",
       name: "백엔드 지망 3학년",
       schoolHidden: "서울권 주요 대학",
+      avatar: "/assets/peer-profile-1.webp",
       intro: "분산 시스템과 API 설계에 관심이 많고, 팀 프로젝트 경험을 같이 쌓을 사람을 찾고 있어요.",
       portfolio: "github.com/demo/backend-student",
       tags: ["백엔드", "인턴 준비", "API"],
@@ -363,6 +365,7 @@ const fallbackInsight: Insight = {
       id: "peer-2",
       name: "AI 프로덕트 빌더",
       schoolHidden: "수도권 사립대",
+      avatar: "/assets/peer-profile-2.webp",
       intro: "데이터 분석 공모전과 해커톤을 같이 나갈 컴공 계열 동료를 찾고 있어요.",
       portfolio: "notion.site/demo-ai-builder",
       tags: ["AI", "해커톤", "공모전"],
@@ -1247,37 +1250,34 @@ function AppDashboard({
                   {peers.map((peer, index) => {
                     const matchingRate = peerMatchingRates[index % peerMatchingRates.length];
                     return (
-                    <article className="similar-user-card" key={`${peer.id}-${groupIndex}`}>
-                      <span
-                          className="peer-avatar initial-avatar"
-                          style={
-                            {
-                              "--avatar-color": avatarPalette[index % avatarPalette.length],
-                            } as React.CSSProperties
-                          }
-                          aria-hidden="true"
-                      >
-                        {Array.from(peer.name)[0]}
-                      </span>
-                      <h3>{peer.name}</h3>
-                      <span className={`match-badge ${getMatchBadgeTone(matchingRate)}`}>
-                        {matchingRate}% 매칭
-                      </span>
-                      <p>{peer.schoolHidden}</p>
-                      <div className="peer-chip-row">
-                        {peer.tags.slice(0, 3).map((tag) => (
-                          <span key={tag}>{tag}</span>
-                        ))}
-                      </div>
-                      <footer>
-                        <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
-                        <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
-                      </footer>
-                      <button className="letter-button">
-                        <MessageSquareText size={16} />
-                        편지 보내기
-                      </button>
-                    </article>
+                      <article className="similar-user-card" key={`${peer.id}-${groupIndex}`}>
+                        <Image
+                          className="peer-avatar"
+                          src={getPeerAvatar(peer, index)}
+                          alt={groupIndex === 0 ? `${peer.name} 프로필 사진` : ""}
+                          width={48}
+                          height={48}
+                          unoptimized
+                        />
+                        <h3>{peer.name}</h3>
+                        <span className={`match-badge ${getMatchBadgeTone(matchingRate)}`}>
+                          {matchingRate}% 매칭
+                        </span>
+                        <p>{peer.schoolHidden}</p>
+                        <div className="peer-chip-row">
+                          {peer.tags.slice(0, 3).map((tag) => (
+                            <span key={tag}>{tag}</span>
+                          ))}
+                        </div>
+                        <footer>
+                          <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
+                          <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
+                        </footer>
+                        <button className="letter-button">
+                          <MessageSquareText size={16} />
+                          편지 보내기
+                        </button>
+                      </article>
                     );
                   })}
                 </div>
@@ -1497,6 +1497,7 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
   const [activeFilter, setActiveFilter] = useState<NetworkFilter>("전체");
   const featuredPeers = peers.map((peer, index) => ({
     ...peer,
+    avatar: getPeerAvatar(peer, index),
     matchScore: [92, 88, 84, 81, 78][index] || 76,
     category: ["해커톤", "공모전", "포트폴리오 피드백", "사이드프로젝트", "사이드프로젝트"][
       index
@@ -1546,52 +1547,48 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
           </section>
 
           <div className="networking-grid">
-            {filteredPeers.map((peer) => {
-              const avatarIndex = featuredPeers.findIndex((item) => item.id === peer.id);
-              return (
-                <article className="networking-card" key={peer.id}>
-                  <header>
-                    <span
-                      className="networking-avatar initial-avatar"
-                      style={
-                        { "--avatar-color": avatarPalette[avatarIndex % avatarPalette.length] } as React.CSSProperties
-                      }
-                      aria-hidden="true"
-                    >
-                      {Array.from(peer.name)[0]}
-                    </span>
-                    <div>
-                      <h3>{peer.name}</h3>
-                      <p>{peer.schoolHidden}</p>
-                    </div>
-                    <strong className={`networking-match ${getMatchBadgeTone(peer.matchScore)}`}>
-                      {peer.matchScore}%
-                    </strong>
-                  </header>
-                  <div className="networking-intent">
-                    <span aria-hidden="true">◎</span>
-                    {peer.intent}
+            {filteredPeers.map((peer) => (
+              <article className="networking-card" key={peer.id}>
+                <header>
+                  <Image
+                    className="networking-avatar"
+                    src={peer.avatar}
+                    alt={`${peer.name} 프로필 사진`}
+                    width={58}
+                    height={58}
+                    unoptimized
+                  />
+                  <div>
+                    <h3>{peer.name}</h3>
+                    <p>{peer.schoolHidden}</p>
                   </div>
-                  <p>{peer.note}</p>
-                  <div className="networking-tags">
-                    {peer.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                  <footer>
-                    <button type="button">프로필 보기</button>
-                    <button
-                      className={sentPeerId === peer.id ? "sent" : ""}
-                      onClick={() => setSentPeerId(peer.id)}
-                      type="button"
-                    >
-                      <Mail size={16} />
-                      {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
-                    </button>
-                  </footer>
-                </article>
-              );
-            })}
+                  <strong className={`networking-match ${getMatchBadgeTone(peer.matchScore)}`}>
+                    {peer.matchScore}%
+                  </strong>
+                </header>
+                <div className="networking-intent">
+                  <span aria-hidden="true">◎</span>
+                  {peer.intent}
+                </div>
+                <p>{peer.note}</p>
+                <div className="networking-tags">
+                  {peer.tags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+                <footer>
+                  <button type="button">프로필 보기</button>
+                  <button
+                    className={sentPeerId === peer.id ? "sent" : ""}
+                    onClick={() => setSentPeerId(peer.id)}
+                    type="button"
+                  >
+                    <Mail size={16} />
+                    {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
+                  </button>
+                </footer>
+              </article>
+            ))}
           </div>
         </div>
 
@@ -2079,11 +2076,24 @@ const dashboardSparklines = [
 
 const peerMatchingRates = [94, 88, 79, 91, 83];
 
+const peerAvatarAssets = [
+  "/assets/peer-profile-1.webp",
+  "/assets/peer-profile-2.webp",
+  "/assets/peer-profile-3.webp",
+  "/assets/peer-profile-4.webp",
+  "/assets/peer-profile-5.webp",
+];
+
+function getPeerAvatar(peer: Insight["peers"][number], index: number) {
+  return peer.avatar ?? peerAvatarAssets[index % peerAvatarAssets.length];
+}
+
 const dashboardExtraPeers: Insight["peers"] = [
   {
     id: "peer-extra-1",
     name: "알고리즘형 동료",
     schoolHidden: "한양대 컴퓨터공학과",
+    avatar: "/assets/peer-profile-3.webp",
     intro: "알고리즘과 시스템 설계에 관심이 많아요.",
     portfolio: "demo",
     tags: ["알고리즘", "시스템", "보안"],
@@ -2092,6 +2102,7 @@ const dashboardExtraPeers: Insight["peers"] = [
     id: "peer-extra-2",
     name: "데이터 분석형 동료",
     schoolHidden: "고려대 컴퓨터학과",
+    avatar: "/assets/peer-profile-4.webp",
     intro: "데이터 분석과 Python 프로젝트를 준비 중이에요.",
     portfolio: "demo",
     tags: ["AI/ML", "데이터분석", "Python"],
@@ -2100,6 +2111,7 @@ const dashboardExtraPeers: Insight["peers"] = [
     id: "peer-extra-3",
     name: "서비스 기획형 동료",
     schoolHidden: "성균관대 소프트웨어학과",
+    avatar: "/assets/peer-profile-5.webp",
     intro: "모바일 서비스와 백엔드 협업을 좋아해요.",
     portfolio: "demo",
     tags: ["모바일", "백엔드", "Firebase"],
