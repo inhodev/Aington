@@ -33,7 +33,20 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  Bar,
+  BarChart,
+  LabelList,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type Insight = {
   target: {
@@ -120,6 +133,14 @@ type Insight = {
     intro: string;
     portfolio: string;
     tags: string[];
+    strengthTags?: string[];
+    focusAreas?: string[];
+    activityStats?: PortfolioStats;
+    matchScore?: number;
+    matchReasons?: string[];
+    complementTags?: string[];
+    activityGaps?: PortfolioCategory[];
+    matchMode?: "complement";
   }>;
 };
 
@@ -140,11 +161,24 @@ type DeepReport = {
   activityMix: Array<{
     name: string;
     reason: string;
-    confidence: string;
+    confidence: "높음" | "중간" | "낮음";
   }>;
   curriculumRecommendations: string[];
   riskNotes: string[];
   sources: string[];
+  chartData: {
+    radarChart: {
+      labels: string[];
+      mySchool: number[];
+      avgSchool: number[];
+    };
+    barChart: Array<{
+      category: string;
+      me: number;
+      avg: number;
+      unit: string;
+    }>;
+  };
 };
 
 type DeepReportStatus = "idle" | "loading" | "ready" | "error";
@@ -175,6 +209,11 @@ type ChatMessage = {
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const deepReportLoadingSteps = [
+  "커리큘럼 비교 신호 정렬",
+  "Gemini 3 Flash 심화 분석",
+  "포트폴리오 우선순위 편집",
+];
 const LOGIN_STORAGE_KEY = "career-scope-logged-in";
 const FIELD_STORAGE_KEY = "career-scope-selected-field";
 const CURRENT_USER_ID = "user-current";
@@ -698,6 +737,32 @@ export default function Home() {
       });
     } catch {
       // Demo flow continues even if the local API is not running.
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/complement-matches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          school,
+          department,
+          matchingDistance,
+          portfolioStats,
+        }),
+      });
+
+      if (response.ok) {
+        const matchedPeers = (await response.json()) as Insight["peers"];
+        setInsight((currentInsight) => {
+          const baseInsight = currentInsight || {
+            ...fallbackInsight,
+            target: { ...fallbackInsight.target, school, department },
+          };
+          return { ...baseInsight, peers: matchedPeers };
+        });
+      }
+    } catch {
+      // Keep the existing demo recommendations if complement matching is unavailable.
     }
 
     completeLogin();
@@ -1502,7 +1567,7 @@ function AppDashboard({
 
         <section className="similar-users">
           <div className="section-heading-row">
-            <h2>나와 비슷한 사용자</h2>
+            <h2>나를 보완하는 사용자</h2>
             <button onClick={() => selectTab("networking")} type="button">
               더보기
               <ChevronRight size={18} />
@@ -1517,7 +1582,7 @@ function AppDashboard({
                   key={groupIndex}
                 >
                   {peers.map((peer, index) => {
-                    const matchingRate = peerMatchingRates[index % peerMatchingRates.length];
+                    const matchingRate = peer.matchScore ?? peerMatchingRates[index % peerMatchingRates.length];
                     return (
                       <article className="similar-user-card" key={`${peer.id}-${groupIndex}`}>
                         <Image
@@ -1538,6 +1603,11 @@ function AppDashboard({
                             <span key={tag}>{tag}</span>
                           ))}
                         </div>
+                        {peer.complementTags && peer.complementTags.length > 0 && (
+                          <p>
+                            보완: {peer.complementTags.slice(0, 2).join(", ")}
+                          </p>
+                        )}
                         <footer>
                           <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
                           <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
@@ -1709,8 +1779,10 @@ function DeepReportPreview({
     return <DeepReportResult report={report} />;
   }
 
+  const isGenerating = status === "loading";
+
   return (
-    <section className="compare-preview-page">
+    <section className={`compare-preview-page${isGenerating ? " is-generating" : ""}`}>
       <div className="compare-hero-copy">
         <span>
           <LockKeyhole size={16} />
@@ -1758,7 +1830,7 @@ function DeepReportPreview({
           </div>
         </article>
 
-        <article className="compare-card locked">
+        <article className="compare-card locked" aria-busy={isGenerating}>
           <div className="locked-preview-content">
             <div className="compare-card-title">
               <span>
@@ -1781,38 +1853,42 @@ function DeepReportPreview({
             </div>
           </div>
           <div className="compare-lock-overlay">
-            <div className="compare-lock-icon">
-              <LockKeyhole size={32} />
-            </div>
-            <h3>심화 리포트 결제 후 확인</h3>
-            <p>비교 보기, 학교별 활동 조합, 포트폴리오 보완 우선순위가 함께 열립니다.</p>
-            <ul className="locked-feature-list">
-              <li>
-                <CheckCircle2 size={16} />
-                타학교 비교 상세 데이터
-              </li>
-              <li>
-                <CheckCircle2 size={16} />
-                상위 20% 활동 조합 분석
-              </li>
-              <li>
-                <CheckCircle2 size={16} />
-                맞춤 커리큘럼 추천
-              </li>
-            </ul>
-            {status === "error" && (
-              <p className="deep-report-error" role="alert">
-                {error}
-              </p>
+            {isGenerating ? (
+              <DeepReportGenerating />
+            ) : (
+              <>
+                <div className="compare-lock-icon">
+                  <LockKeyhole size={32} />
+                </div>
+                <h3>심화 리포트 결제 후 확인</h3>
+                <p>비교 보기, 학교별 활동 조합, 포트폴리오 보완 우선순위가 함께 열립니다.</p>
+                <ul className="locked-feature-list">
+                  <li>
+                    <CheckCircle2 size={16} />
+                    타학교 비교 상세 데이터
+                  </li>
+                  <li>
+                    <CheckCircle2 size={16} />
+                    상위 20% 활동 조합 분석
+                  </li>
+                  <li>
+                    <CheckCircle2 size={16} />
+                    맞춤 커리큘럼 추천
+                  </li>
+                </ul>
+                {status === "error" && (
+                  <p className="deep-report-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <small className="unlock-note">
+                  Gemini API로 커리큘럼 비교 데이터를 실시간 분석합니다.
+                </small>
+                <button onClick={onUnlock} type="button">
+                  심화 리포트 생성하기 · 4,900원
+                </button>
+              </>
             )}
-            <small className="unlock-note">
-              Gemini API로 커리큘럼 비교 데이터를 실시간 분석합니다.
-            </small>
-            <button disabled={status === "loading"} onClick={onUnlock} type="button">
-              {status === "loading"
-                ? "Gemini가 심화 리포트 생성 중"
-                : "심화 리포트 생성하기 · 4,900원"}
-            </button>
           </div>
         </article>
       </div>
@@ -1825,111 +1901,303 @@ function DeepReportPreview({
   );
 }
 
-function DeepReportResult({ report }: { report: DeepReport }) {
+function DeepReportGenerating() {
   return (
-    <section className="deep-report-result">
-      <div className="deep-report-header">
-        <span>
-          <CheckCircle2 size={18} />
-          Gemini 생성 완료
-        </span>
-        <div>
-          <h2>심화 리포트가 열렸어요</h2>
-          <p>{report.executiveSummary}</p>
-        </div>
-        <small>
-          {report.model} · {new Date(report.generatedAt).toLocaleString("ko-KR")}
-        </small>
+    <div className="deep-report-generating" role="status" aria-live="polite">
+      <div className="generation-orb" aria-hidden="true">
+        <span />
+        <b />
       </div>
+      <div className="generation-copy">
+        <small>Vertex AI Gemini 3 Flash</small>
+        <h3>심화 리포트를 조립하는 중</h3>
+        <p>경기대학교 컴퓨터공학과 데이터를 비교하고 실행 우선순위를 정리하고 있어요.</p>
+      </div>
+      <div className="generation-progress" aria-hidden="true">
+        <span />
+      </div>
+      <ol className="generation-steps">
+        {deepReportLoadingSteps.map((step, index) => (
+          <li key={step} style={{ "--step-index": index } as CSSProperties}>
+            <CheckCircle2 size={15} />
+            {step}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
-      <div className="deep-report-grid">
-        <DeepReportSection
-          icon={BarChart3}
-          items={report.benchmarkInsights.map((item) => ({
-            title: item.title,
-            body: item.detail,
-            meta: item.scoreImpact,
-          }))}
-          title="비교군 인사이트"
-        />
-        <DeepReportSection
-          icon={Target}
-          items={report.portfolioPriorities.map((item) => ({
-            title: item.title,
-            body: item.why,
-            meta: item.nextStep,
-          }))}
-          title="포트폴리오 우선순위"
-        />
-        <DeepReportSection
-          icon={Trophy}
-          items={report.activityMix.map((item) => ({
-            title: item.name,
-            body: item.reason,
-            meta: `확신도 ${item.confidence}`,
-          }))}
-          title="추천 활동 조합"
-        />
-      </div>
+function DeepReportResult({ report }: { report: DeepReport }) {
+  const [openInsightIndex, setOpenInsightIndex] = useState(0);
+  const summary = splitExecutiveSummary(report.executiveSummary);
+
+  return (
+    <section className="deep-report-result" aria-live="polite">
+      <header className="deep-report-header">
+        <div className="deep-report-header-top">
+          <span>✦ 프리미엄 심화 리포트</span>
+          <small>
+            {report.model} · {new Date(report.generatedAt).toLocaleString("ko-KR")}
+          </small>
+        </div>
+        <div className="executive-summary-list">
+          <p className="summary-strength">
+            <span>✓</span>
+            {summary[0]}
+          </p>
+          <p className="summary-risk">
+            <span>⚠</span>
+            {summary[1]}
+          </p>
+          <p className="summary-action">
+            <span>→</span>
+            {summary[2]}
+          </p>
+        </div>
+      </header>
+
+      <DeepReportCharts chartData={report.chartData} />
+
+      <section className="report-section-block report-accordion">
+        <div className="deep-section-heading">
+          <BarChart3 size={20} />
+          <h3>비교군 인사이트</h3>
+        </div>
+        <div className="report-accordion-list">
+          {report.benchmarkInsights.map((item, index) => {
+            const isOpen = openInsightIndex === index;
+            return (
+              <article className="report-accordion-item" key={item.title}>
+                <button
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenInsightIndex(isOpen ? -1 : index)}
+                  type="button"
+                >
+                  <span>{item.title}</span>
+                  <em>{item.scoreImpact}</em>
+                </button>
+                {isOpen && <p>{item.detail}</p>}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="report-section-block portfolio-steps">
+        <div className="deep-section-heading">
+          <Target size={20} />
+          <h3>포트폴리오 우선순위</h3>
+        </div>
+        <div className="portfolio-step-list">
+          {report.portfolioPriorities.map((item, index) => (
+            <article className="portfolio-step-card" key={item.title}>
+              <span>{index + 1}</span>
+              <div>
+                <h4>{item.title}</h4>
+                <p>{item.why}</p>
+                <div className="next-step-box">
+                  <strong>→ 지금 바로:</strong>
+                  {item.nextStep}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="report-section-block">
+        <div className="deep-section-heading">
+          <Trophy size={20} />
+          <h3>추천 활동 조합</h3>
+        </div>
+        <div className="activity-card-grid">
+          {report.activityMix.map((item) => (
+            <article className="activity-mix-card" key={item.name}>
+              <span className={`confidence-badge confidence-${item.confidence}`}>
+                {item.confidence}
+              </span>
+              <h4>{item.name}</h4>
+              <p>{item.reason}</p>
+              {item.confidence === "높음" && <small>✦ 우선 추천</small>}
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="deep-report-bottom">
-        <article>
+        <article className="curriculum-card">
           <h3>커리큘럼 추천</h3>
           <ul>
             {report.curriculumRecommendations.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>
+                <span>✓</span>
+                {item}
+              </li>
             ))}
           </ul>
         </article>
-        <article>
+        <article className="risk-card">
           <h3>주의할 점</h3>
           <ul>
             {report.riskNotes.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>
+                <span>⚠</span>
+                {item}
+              </li>
             ))}
           </ul>
         </article>
-        {report.sources.length > 0 && (
-          <article>
-            <h3>분석 근거</h3>
-            <ul>
-              {report.sources.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        )}
       </div>
+
+      <section className="report-sources">
+        {report.sources.length > 0 && (
+          <>
+            <h3>분석 근거</h3>
+            <div>
+              {report.sources.map((item) => (
+                <span key={item}>🔗 {item}</span>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </section>
   );
 }
 
-function DeepReportSection({
-  icon: Icon,
-  items,
-  title,
+function DeepReportCharts({ chartData }: { chartData: DeepReport["chartData"] }) {
+  return (
+    <section className="deep-report-chart-grid" aria-label="심화 리포트 차트 데이터">
+      <DeepReportRadarChart radarChart={chartData.radarChart} />
+      <DeepReportBarChart barChart={chartData.barChart} />
+    </section>
+  );
+}
+
+function DeepReportRadarChart({
+  radarChart,
 }: {
-  icon: LucideIcon;
-  items: Array<{ title: string; body: string; meta: string }>;
-  title: string;
+  radarChart: DeepReport["chartData"]["radarChart"];
+}) {
+  const data = radarChart.labels.map((label, index) => ({
+    label,
+    mySchool: radarChart.mySchool[index] ?? 0,
+    avgSchool: radarChart.avgSchool[index] ?? 0,
+  }));
+
+  return (
+    <article className="deep-report-chart-card radar">
+      <div className="chart-card-heading">
+        <h3>커리큘럼 역량 비교</h3>
+        <p>나의 학교 vs 동일 분야 타학교 평균</p>
+      </div>
+      <div className="report-chart-canvas">
+        <ResponsiveContainer width="100%" height={310}>
+          <RadarChart data={data} outerRadius="72%">
+            <PolarGrid stroke="#E2E8F0" />
+            <PolarAngleAxis dataKey="label" tick={{ fill: "#475569", fontSize: 12, fontWeight: 700 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+            <Radar
+              dataKey="avgSchool"
+              fill="rgba(148,163,184,0.15)"
+              fillOpacity={1}
+              name="타학교 평균"
+              stroke="#94A3B8"
+              strokeWidth={2}
+            />
+            <Radar
+              dataKey="mySchool"
+              fill="rgba(99,102,241,0.3)"
+              fillOpacity={1}
+              name="내 학교"
+              stroke="#4F46E5"
+              strokeWidth={2}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="report-chart-legend">
+        <span><i className="legend-indigo" />내 학교</span>
+        <span><i className="legend-slate" />타학교 평균</span>
+      </div>
+    </article>
+  );
+}
+
+function DeepReportBarChart({
+  barChart,
+}: {
+  barChart: DeepReport["chartData"]["barChart"];
 }) {
   return (
-    <article className="deep-report-section">
-      <div className="section-title">
-        <Icon size={22} />
-        <h3>{title}</h3>
+    <article className="deep-report-chart-card bars">
+      <div className="chart-card-heading">
+        <h3>활동 이력 비교</h3>
+        <p>나 vs 동일 커리큘럼 선택 학생 평균</p>
       </div>
-      <div className="deep-report-list">
-        {items.map((item) => (
-          <div key={item.title}>
-            <strong>{item.title}</strong>
-            <p>{item.body}</p>
-            <small>{item.meta}</small>
-          </div>
+      <div className="report-chart-canvas">
+        <ResponsiveContainer width="100%" height={310}>
+          <BarChart data={barChart} layout="vertical" margin={{ top: 8, right: 28, bottom: 8, left: 10 }}>
+            <XAxis axisLine={false} tickLine={false} type="number" />
+            <YAxis
+              axisLine={false}
+              dataKey="category"
+              tick={{ fill: "#475569", fontSize: 12, fontWeight: 700 }}
+              tickLine={false}
+              type="category"
+              width={82}
+            />
+            <Bar dataKey="me" fill="#4F46E5" name="내 수치" radius={[0, 8, 8, 0]}>
+              <LabelList
+                position="right"
+                style={{ fill: "#4F46E5", fontSize: 12, fontWeight: 800 }}
+                valueAccessor={(entry) => {
+                  const payload = entry.payload as DeepReport["chartData"]["barChart"][number];
+                  return `${entry.value ?? 0}${payload.unit}`;
+                }}
+              />
+            </Bar>
+            <Bar dataKey="avg" fill="#E2E8F0" name="평균" radius={[0, 8, 8, 0]}>
+              <LabelList
+                position="right"
+                style={{ fill: "#64748B", fontSize: 12, fontWeight: 800 }}
+                valueAccessor={(entry) => {
+                  const payload = entry.payload as DeepReport["chartData"]["barChart"][number];
+                  return `${entry.value ?? 0}${payload.unit}`;
+                }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="bar-value-list">
+        {barChart.map((item) => (
+          <span key={item.category}>
+            {item.category}
+            <strong>
+              나 {item.me}
+              {item.unit} · 평균 {item.avg}
+              {item.unit}
+            </strong>
+          </span>
         ))}
       </div>
     </article>
   );
+}
+
+function splitExecutiveSummary(summary: string) {
+  const sentences = summary
+    .split(/(?<=[.!?。]|[다요음임함됨음]\.)\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return [
+    sentences[0] || summary,
+    sentences[1] || "비교군 대비 보완이 필요한 항목을 추가 분석해야 합니다.",
+    sentences[2] || "오늘 바로 포트폴리오 1개를 선택해 실행 기록을 추가하세요.",
+  ] as const;
 }
 
 function NetworkingPage({
@@ -1945,20 +2213,28 @@ function NetworkingPage({
   const featuredPeers = peers.map((peer, index) => ({
     ...peer,
     avatar: getPeerAvatar(peer, index),
-    matchScore: [92, 88, 84, 81, 78][index] || 76,
-    intent: ["해커톤 팀빌딩", "공모전 동료", "포트폴리오 피드백", "사이드프로젝트", "커피챗"][index] || "협업",
-    note: [
-      "웹/앱 개발과 API 관심사가 겹치고 프로젝트 준비 단계가 비슷합니다.",
-      "인공지능과 데이터 과학 관심사가 함께 잡혀 팀 구성 가능성이 높습니다.",
-      "소프트웨어 공학과 시스템 소프트웨어 역량을 서로 보완할 수 있습니다.",
-      "데이터 분석 경험을 같이 확장하기 좋은 프로필입니다.",
-      "HCI와 웹/앱 개발 협업 목표가 맞물립니다.",
-    ][index] || "관심 분야와 활동 목표가 가깝습니다.",
+    matchScore: peer.matchScore ?? ([92, 88, 84, 81, 78][index] || 76),
+    intent:
+      peer.matchMode === "complement"
+        ? "단점 보완 매칭"
+        : ["해커톤 팀빌딩", "공모전 동료", "포트폴리오 피드백", "사이드프로젝트", "커피챗"][index] || "협업",
+    note:
+      peer.matchReasons?.[0] ??
+      ([
+        "웹/앱 개발과 API 관심사가 겹치고 프로젝트 준비 단계가 비슷합니다.",
+        "인공지능과 데이터 과학 관심사가 함께 잡혀 팀 구성 가능성이 높습니다.",
+        "소프트웨어 공학과 시스템 소프트웨어 역량을 서로 보완할 수 있습니다.",
+        "데이터 분석 경험을 같이 확장하기 좋은 프로필입니다.",
+        "HCI와 웹/앱 개발 협업 목표가 맞물립니다.",
+      ][index] ||
+        "관심 분야와 활동 목표가 가깝습니다."),
   }));
   const filteredPeers =
     selectedTags.length === 0
       ? featuredPeers
-      : featuredPeers.filter((peer) => selectedTags.some((tag) => peer.tags.includes(tag)));
+      : featuredPeers.filter((peer) =>
+          selectedTags.some((tag) => [...peer.tags, ...(peer.complementTags ?? [])].includes(tag)),
+        );
   const activeFilterCopy = getNetworkFilterCopy(selectedTags);
 
   function toggleNetworkTag(tag: string) {
@@ -2030,6 +2306,11 @@ function NetworkingPage({
                   {peer.intent}
                 </div>
                 <p>{peer.note}</p>
+                {peer.complementTags && peer.complementTags.length > 0 && (
+                  <div className="networking-intent">
+                    보완: {peer.complementTags.slice(0, 3).join(", ")}
+                  </div>
+                )}
                 <div className="networking-tags">
                   {peer.tags.map((tag) => (
                     <span key={tag}>{tag}</span>

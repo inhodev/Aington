@@ -5,6 +5,12 @@ import mongoose from "mongoose";
 import {
   buildCurriculumSimilarityFromDatabase,
 } from "./data/curriculumSimilarity.js";
+import {
+  buildComplementMatches,
+  type MatchingDistance,
+  type PortfolioCategory,
+  type PortfolioStats,
+} from "./data/complementMatching.js";
 import { buildCurriculumReport } from "./data/curriculumReport.js";
 import { buildGeminiDeepReport, GeminiReportError } from "./data/deepReport.js";
 import { buildInsight } from "./data/demo.js";
@@ -76,6 +82,24 @@ function requireString(body: Record<string, unknown>, key: string) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
+}
+
+function isMatchingDistance(value: unknown): value is MatchingDistance {
+  return value === "similar" || value === "balanced" || value === "diverse";
+}
+
+function readPortfolioStats(value: unknown): PortfolioStats | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const categories: PortfolioCategory[] = ["프로젝트", "논문", "대회", "기타"];
+  const source = value as Record<string, unknown>;
+  return categories.reduce<PortfolioStats>((stats, category) => {
+    const count = source[category];
+    stats[category] = typeof count === "number" && Number.isFinite(count) ? count : 0;
+    return stats;
+  }, {});
 }
 
 app.get("/health", (_req, res) => {
@@ -200,6 +224,40 @@ app.post("/api/deep-report", async (req, res) => {
     console.error(error);
     return res.status(500).json({ error: "Failed to generate deep report." });
   }
+});
+
+app.post("/api/complement-matches", async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const school = requireString(body, "school");
+  const department = requireString(body, "department");
+  const matchingDistance = body.matchingDistance;
+  const portfolioStats = readPortfolioStats(body.portfolioStats);
+
+  if (!school || !department || !isMatchingDistance(matchingDistance) || !portfolioStats) {
+    const missing = [
+      !school ? "school" : null,
+      !department ? "department" : null,
+      !isMatchingDistance(matchingDistance) ? "matchingDistance" : null,
+      !portfolioStats ? "portfolioStats" : null,
+    ].filter(Boolean);
+    return res.status(400).json({ error: "Missing required fields", missing });
+  }
+
+  const curriculumSimilarity = await buildCurriculumSimilarityFromDatabase({
+    school,
+    department,
+  });
+  const weaknessAreas = curriculumSimilarity.rankings[0]?.differentAreas ?? [];
+  const insight = buildInsight(school, department);
+
+  res.json(
+    buildComplementMatches({
+      peers: insight.peers,
+      weaknessAreas,
+      portfolioStats,
+      matchingDistance,
+    }),
+  );
 });
 
 app.post("/api/signup", async (req, res) => {

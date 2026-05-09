@@ -32,11 +32,24 @@ export type DeepReport = {
   activityMix: Array<{
     name: string;
     reason: string;
-    confidence: string;
+    confidence: "높음" | "중간" | "낮음";
   }>;
   curriculumRecommendations: string[];
   riskNotes: string[];
   sources: string[];
+  chartData: {
+    radarChart: {
+      labels: string[];
+      mySchool: number[];
+      avgSchool: number[];
+    };
+    barChart: Array<{
+      category: string;
+      me: number;
+      avg: number;
+      unit: string;
+    }>;
+  };
 };
 
 type GeminiGenerateResponse = {
@@ -53,7 +66,7 @@ type GeminiGenerateResponse = {
 };
 
 const reportSystemInstruction =
-  "You are a Korean career advisor for university students. Generate practical, evidence-grounded premium reports from the provided curriculum and benchmark data. Return JSON only.";
+  'You are a senior Korean career strategist specializing in university curriculum analysis and student career development. You produce premium, data-grounded reports that feel like they were written by a human expert, not a chatbot. Your tone is direct, specific, and actionable. You never use vague filler phrases like "노력하세요" or "중요합니다". Every sentence must contain a concrete fact, comparison, or next step. Return JSON only, no markdown.';
 
 const deepReportSchema: ResponseSchema = {
   type: FunctionDeclarationSchemaType.OBJECT,
@@ -107,6 +120,43 @@ const deepReportSchema: ResponseSchema = {
       type: "ARRAY",
       items: { type: "STRING" },
     },
+    chartData: {
+      type: "OBJECT",
+      properties: {
+        radarChart: {
+          type: "OBJECT",
+          properties: {
+            labels: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+            },
+            mySchool: {
+              type: "ARRAY",
+              items: { type: "NUMBER" },
+            },
+            avgSchool: {
+              type: "ARRAY",
+              items: { type: "NUMBER" },
+            },
+          },
+          propertyOrdering: ["labels", "mySchool", "avgSchool"],
+        },
+        barChart: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              category: { type: "STRING" },
+              me: { type: "NUMBER" },
+              avg: { type: "NUMBER" },
+              unit: { type: "STRING" },
+            },
+            propertyOrdering: ["category", "me", "avg", "unit"],
+          },
+        },
+      },
+      propertyOrdering: ["radarChart", "barChart"],
+    },
   },
   propertyOrdering: [
     "executiveSummary",
@@ -116,6 +166,7 @@ const deepReportSchema: ResponseSchema = {
     "curriculumRecommendations",
     "riskNotes",
     "sources",
+    "chartData",
   ],
 } as unknown as ResponseSchema;
 
@@ -344,20 +395,58 @@ function buildPrompt(input: DeepReportInput) {
     curriculumSimilarity: input.curriculumSimilarity,
   });
 
-  return [
-    `${input.school || "선택 학교"} ${input.department || "선택 학과"} 학생을 위한 유료 심화 리포트를 작성해줘.`,
-    `사용자가 랜딩페이지에서 선택한 분석 대상은 "${input.school} ${input.department}"이고 관심 분야는 "${input.field || "미선택"}"야. 이 선택값을 리포트의 최종 표기 기준으로 삼아.`,
-    "입력 데이터 안에 학교명/학과명의 축약형이나 유사 명칭이 섞여 있어도 최종 문장에서는 랜딩 선택값을 우선해.",
-    "한국어로 작성하고, 마크다운 없이 짧고 구체적인 문장만 사용해.",
-    "benchmarkInsights는 비교 대학/비교군 관점의 차이를 3개 작성해.",
-    "portfolioPriorities는 학생이 다음 2주 안에 실행할 수 있는 보완 과제를 3개 작성해.",
-    "activityMix는 추천 활동 조합을 3개 작성하고 confidence는 높음/중간/낮음 중 하나로 작성해.",
-    "curriculumRecommendations와 riskNotes는 각각 3개 이하로 작성해.",
-    `입력 데이터: ${compact}`,
-  ].join("\n");
+  return `
+${input.school || "선택 학교"} ${input.department || "선택 학과"} 재학생을 위한 프리미엄 심화 커리어 리포트를 작성해줘.
+관심 분야: ${input.field || "미선택"}
+입력 데이터: ${compact}
+
+아래 규칙을 반드시 지켜:
+
+1. 모든 문장은 구체적인 수치, 학교명, 과목명, 직군명을 포함해야 해.
+   나쁜 예: "프로젝트 경험을 쌓으세요"
+   좋은 예: "한양대·고려대 동일 분야 학생 대비 프로젝트 수가 1.3개 적으므로, 2주 내 GitHub에 토이프로젝트 1개 push를 목표로 해"
+
+2. benchmarkInsights: 비교 대학과의 구체적 차이를 수치로 표현.
+   scoreImpact는 "서류 합격률 +12% 예상" 형태로 작성.
+
+3. portfolioPriorities: 각 항목에 nextStep은 오늘 당장 실행 가능한 단 하나의 행동을 동사로 시작하는 한 문장으로 작성.
+   예: "가장 완성도 높은 프로젝트 1개 선정 후 README에 기술 스택과 트러블슈팅 2건을 추가 작성하기"
+
+4. activityMix: confidence가 "높음"인 항목은 반드시 1개 이상 포함.
+   reason은 왜 이 분야에서 특히 유효한지 커리큘럼 근거를 포함해.
+
+5. curriculumRecommendations: 단순 과목 나열 금지.
+   "A 과목에서 배운 B 개념을 C 상황에 적용하라" 형태로 작성.
+
+6. riskNotes: 현재 이대로 가면 발생할 구체적 리스크를 작성.
+   예: "AI/보안 과목 미이수 시 관련 직군 서류에서 기술스택 공백으로 탈락 가능성 높음"
+
+7. chartData 필드를 추가로 반환해:
+   {
+     "radarChart": {
+       "labels": ["알고리즘/자료구조", "AI/ML", "데이터베이스", "보안/시스템", "프로젝트/실습"],
+       "mySchool": [number, number, number, number, number],
+       "avgSchool": [number, number, number, number, number]
+     },
+     "barChart": [
+       { "category": "공모전 참여", "me": number, "avg": number, "unit": "회" },
+       { "category": "프로젝트", "me": number, "avg": number, "unit": "개" },
+       { "category": "논문", "me": number, "avg": number, "unit": "편" },
+       { "category": "자격증", "me": number, "avg": number, "unit": "개" }
+     ]
+   }
+   각 수치는 입력 데이터 기반으로 추론해서 채워줘.
+
+8. executiveSummary는 3문장으로 제한:
+   1문장: 이 학생의 가장 큰 강점
+   2문장: 가장 시급한 약점
+   3문장: 지금 당장 해야 할 한 가지
+`.trim();
 }
 
 function normalizeDeepReport(value: Record<string, unknown>, model: string): DeepReport {
+  const chartData = readChartData(value.chartData);
+
   return {
     generatedAt: new Date().toISOString(),
     model,
@@ -375,11 +464,12 @@ function normalizeDeepReport(value: Record<string, unknown>, model: string): Dee
     activityMix: readObjectArray(value.activityMix).slice(0, 3).map((item) => ({
       name: readString(item.name, "추천 활동"),
       reason: readString(item.reason, "전공 강점과 연결되는 활동입니다."),
-      confidence: readString(item.confidence, "중간"),
+      confidence: readConfidence(item.confidence),
     })),
     curriculumRecommendations: readStringArray(value.curriculumRecommendations).slice(0, 3),
     riskNotes: readStringArray(value.riskNotes).slice(0, 3),
     sources: readStringArray(value.sources).slice(0, 4),
+    chartData,
   };
 }
 
@@ -397,6 +487,80 @@ function readStringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     : [];
+}
+
+function readConfidence(value: unknown): "높음" | "중간" | "낮음" {
+  return value === "높음" || value === "중간" || value === "낮음" ? value : "중간";
+}
+
+function readChartData(value: unknown): DeepReport["chartData"] {
+  const fallbackLabels = ["알고리즘/자료구조", "AI/ML", "데이터베이스", "보안/시스템", "프로젝트/실습"];
+  const fallbackBar = [
+    { category: "공모전 참여", me: 1, avg: 2.4, unit: "회" },
+    { category: "프로젝트", me: 1, avg: 2.8, unit: "개" },
+    { category: "논문", me: 0, avg: 0.4, unit: "편" },
+    { category: "자격증", me: 0, avg: 1.1, unit: "개" },
+  ];
+
+  if (!value || typeof value !== "object") {
+    return {
+      radarChart: {
+        labels: fallbackLabels,
+        mySchool: [78, 52, 68, 48, 56],
+        avgSchool: [70, 61, 64, 58, 66],
+      },
+      barChart: fallbackBar,
+    };
+  }
+
+  const chart = value as Record<string, unknown>;
+  const radar = chart.radarChart && typeof chart.radarChart === "object"
+    ? chart.radarChart as Record<string, unknown>
+    : {};
+  const labels = readStringArray(radar.labels).slice(0, 5);
+  const normalizedLabels = labels.length === 5 ? labels : fallbackLabels;
+  const mySchool = readNumberArray(radar.mySchool, [78, 52, 68, 48, 56], 5, 0, 100);
+  const avgSchool = readNumberArray(radar.avgSchool, [70, 61, 64, 58, 66], 5, 0, 100);
+
+  const barChart = readObjectArray(chart.barChart).slice(0, 4).map((item, index) => ({
+    category: readString(item.category, fallbackBar[index]?.category || "비교 지표"),
+    me: readNumber(item.me, fallbackBar[index]?.me || 0, 0, 100),
+    avg: readNumber(item.avg, fallbackBar[index]?.avg || 0, 0, 100),
+    unit: readString(item.unit, fallbackBar[index]?.unit || "개"),
+  }));
+
+  return {
+    radarChart: {
+      labels: normalizedLabels,
+      mySchool,
+      avgSchool,
+    },
+    barChart: barChart.length === 4 ? barChart : fallbackBar,
+  };
+}
+
+function readNumberArray(
+  value: unknown,
+  fallback: number[],
+  length: number,
+  min: number,
+  max: number,
+) {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const numbers = value
+    .map((item) => readNumber(item, Number.NaN, min, max))
+    .filter((item) => Number.isFinite(item))
+    .slice(0, length);
+
+  return numbers.length === length ? numbers : fallback;
+}
+
+function readNumber(value: unknown, fallback: number, min: number, max: number) {
+  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
 }
 
 function toHeaderRecord(headers: Headers | Record<string, unknown>): Record<string, string> {

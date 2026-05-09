@@ -111,6 +111,9 @@ export const demoInsight = {
       intro: "분산 시스템과 API 설계에 관심이 많고, 팀 프로젝트 경험을 같이 쌓을 사람을 찾고 있어요.",
       portfolio: "github.com/demo/backend-student",
       tags: ["백엔드", "인턴 준비", "API"],
+      strengthTags: ["백엔드", "API", "보안/시스템", "운영체제"],
+      focusAreas: ["소프트웨어 공학", "보안/시스템", "프로젝트/실습"],
+      activityStats: { 프로젝트: 5, 논문: 0, 대회: 2, 기타: 1 },
     },
     {
       id: "peer-2",
@@ -119,6 +122,9 @@ export const demoInsight = {
       intro: "데이터 분석 공모전과 해커톤을 같이 나갈 컴공 계열 동료를 찾고 있어요.",
       portfolio: "notion.site/demo-ai-builder",
       tags: ["AI", "해커톤", "공모전"],
+      strengthTags: ["AI/머신러닝", "데이터", "해커톤"],
+      focusAreas: ["AI/머신러닝", "데이터", "프로젝트/실습"],
+      activityStats: { 프로젝트: 4, 논문: 1, 대회: 6, 기타: 1 },
     },
     {
       id: "peer-3",
@@ -127,6 +133,9 @@ export const demoInsight = {
       intro: "사용자 경험과 인터랙션 구현에 관심이 있고, 포트폴리오 피드백을 주고받고 싶어요.",
       portfolio: "vercel.app/demo-portfolio",
       tags: ["프론트엔드", "UX", "포트폴리오"],
+      strengthTags: ["프론트엔드", "UX", "프로젝트/실습"],
+      focusAreas: ["HCI", "웹/앱 개발", "포트폴리오"],
+      activityStats: { 프로젝트: 6, 논문: 0, 대회: 1, 기타: 2 },
     },
   ],
 };
