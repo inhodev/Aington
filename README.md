@@ -62,7 +62,7 @@ npm install --ignore-scripts
 
 ## 환경 변수
 
-MongoDB를 연결해서 프로필을 저장하려면 예시 파일을 복사한 뒤 값을 조정합니다.
+Neon Postgres를 연결해서 커리큘럼과 프로필을 저장하려면 예시 파일을 복사한 뒤 값을 조정합니다.
 
 ```bash
 cp apps/api/.env.example apps/api/.env
@@ -74,6 +74,7 @@ cp apps/web/.env.example apps/web/.env.local
 ```env
 PORT=4000
 WEB_ORIGIN=http://localhost:3000
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
 MONGODB_URI=mongodb://localhost:27017/career-scope
 ```
 
@@ -83,7 +84,15 @@ MONGODB_URI=mongodb://localhost:27017/career-scope
 NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
 
-`MONGODB_URI`가 없거나 연결에 실패하면 API는 자동으로 인메모리 데모 저장소를 사용합니다. 그래서 DB 없이도 해커톤 시연 흐름을 바로 확인할 수 있습니다.
+`DATABASE_URL`이 있으면 API는 Neon Postgres를 우선 사용합니다. 없으면 MongoDB, 인메모리 데모 저장소 순서로 fallback되어 DB 없이도 해커톤 시연 흐름을 바로 확인할 수 있습니다.
+
+### Neon 초기화
+
+```bash
+npm run prisma:generate --workspace @career-scope/api
+npm run db:push --workspace @career-scope/api
+npm run db:seed --workspace @career-scope/api
+```
 
 ## 주요 스크립트
 

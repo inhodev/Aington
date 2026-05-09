@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model University {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  departments Department[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id           String       @id @default(cuid())
+  universityId String
+  university   University   @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name         String
+  courses      Course[]
+  records      CurriculumRecord[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([universityId, name])
+  @@index([name])
+}
+
+model Course {
+  id              String     @id @default(cuid())
+  departmentId    String
+  department      Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  yearTerm        String
+  title           String
+  canonicalTitle  String
+  area            String
+  credits         Float?
+  requirementType String?
+  track           String?
+  category        String?
+  notes           String?
+  sourceUrl       String?
+  evidenceFile    String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([departmentId])
+  @@index([yearTerm])
+  @@index([area])
+  @@index([canonicalTitle])
+}
+
+model CurriculumRecord {
+  id              String     @id @default(cuid())
+  departmentId    String
+  department      Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  recordType      String
+  category        String?
+  yearTerm        String?
+  item            String?
+  credits         Float?
+  requirementType String?
+  track           String?
+  sourceUrl       String?
+  evidenceFile    String?
+  notes           String?
+  createdAt       DateTime   @default(now())
+
+  @@index([departmentId])
+  @@index([recordType])
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  school      String
+  department  String
+  email       String
+  name        String
+  role        String
+  interest    String
+  wantsToMeet String
+  intro       String
+  portfolio   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([school, department])
+  @@index([email])
+}

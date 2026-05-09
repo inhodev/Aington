@@ -44,6 +44,33 @@ export const demoInsight = {
       delta: "+15%",
     },
   ],
+  curriculumSimilarity: {
+    base: {
+      school: "인하대",
+      department: "컴퓨터공학과",
+      courseCount: 47,
+      filters: {},
+    },
+    rankings: [
+      {
+        rank: 1,
+        school: "아주대",
+        department: "소프트웨어학과",
+        score: 0.74,
+        components: {
+          semantic: 0.78,
+          jaccard: 0.36,
+          area: 0.86,
+          structure: 0.62,
+        },
+        sharedCourses: ["자료구조", "운영체제", "데이터베이스", "알고리즘"],
+        sharedAreas: ["프로그래밍", "자료구조", "알고리즘", "운영체제"],
+        differentAreas: ["AI/머신러닝", "보안"],
+        comparedCourseCount: 60,
+      },
+    ],
+    availableTargets: [],
+  },
   curriculum: [
     {
       name: "자료구조/알고리즘",
@@ -104,7 +131,11 @@ export const demoInsight = {
   ],
 };
 
-export function buildInsight(school?: string, department?: string) {
+export function buildInsight(
+  school?: string,
+  department?: string,
+  _options: { grade?: string; semester?: string; yearTerm?: string } = {},
+) {
   return {
     ...demoInsight,
     target: {

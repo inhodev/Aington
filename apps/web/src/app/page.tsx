@@ -13,7 +13,6 @@ import {
   ChevronRight,
   Code2,
   Download,
-  Gem,
   Globe2,
   GraduationCap,
   HomeIcon,
@@ -31,6 +30,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Insight = {
@@ -52,6 +52,39 @@ type Insight = {
     signal: string;
     delta: string;
   }>;
+  curriculumSimilarity: {
+    base: {
+      school: string;
+      department: string;
+      courseCount: number;
+      filters: {
+        grade?: string;
+        semester?: string;
+        yearTerm?: string;
+      };
+    };
+    rankings: Array<{
+      rank: number;
+      school: string;
+      department: string;
+      score: number;
+      components: {
+        semantic: number;
+        jaccard: number;
+        area: number;
+        structure: number;
+      };
+      sharedCourses: string[];
+      sharedAreas: string[];
+      differentAreas: string[];
+      comparedCourseCount: number;
+    }>;
+    availableTargets: Array<{
+      school: string;
+      department: string;
+      courseCount: number;
+    }>;
+  };
   curriculum: Array<{
     name: string;
     strength: string;
@@ -145,6 +178,33 @@ const fallbackInsight: Insight = {
       delta: "+15%",
     },
   ],
+  curriculumSimilarity: {
+    base: {
+      school: "인하대",
+      department: "컴퓨터공학과",
+      courseCount: 47,
+      filters: {},
+    },
+    rankings: [
+      {
+        rank: 1,
+        school: "아주대",
+        department: "소프트웨어학과",
+        score: 0.74,
+        components: {
+          semantic: 0.78,
+          jaccard: 0.36,
+          area: 0.86,
+          structure: 0.62,
+        },
+        sharedCourses: ["자료구조", "운영체제", "데이터베이스", "알고리즘"],
+        sharedAreas: ["프로그래밍", "자료구조", "알고리즘", "운영체제"],
+        differentAreas: ["AI/머신러닝", "보안"],
+        comparedCourseCount: 60,
+      },
+    ],
+    availableTargets: [],
+  },
   curriculum: [
     {
       name: "자료구조/알고리즘",
@@ -201,6 +261,7 @@ export default function Home() {
   const [step, setStep] = useState<Step>("landing");
   const [school, setSchool] = useState("인하대학교");
   const [department, setDepartment] = useState("컴퓨터공학과");
+  const [grade, setGrade] = useState("전체");
   const [insight, setInsight] = useState<Insight | null>(null);
   const [profileName, setProfileName] = useState("김하늘");
   const [introLength, setIntroLength] = useState(43);
@@ -260,7 +321,11 @@ export default function Home() {
     const delay = new Promise((resolve) => window.setTimeout(resolve, 2100));
 
     try {
-      const query = new URLSearchParams({ school, department }).toString();
+      const query = new URLSearchParams({
+        school,
+        department,
+        ...(grade !== "전체" ? { grade } : {}),
+      }).toString();
       const [response] = await Promise.all([
         fetch(`${API_URL}/api/insights?${query}`),
         delay,
@@ -364,7 +429,11 @@ export default function Home() {
                 <option>연세대학교</option>
                 <option>고려대학교</option>
                 <option>한양대학교</option>
-                <option>성균관대학교</option>
+                <option>아주대학교</option>
+                <option>인천대학교</option>
+                <option>가천대학교</option>
+                <option>경기대학교</option>
+                <option>용인대학교</option>
               </select>
               <ChevronDown className="select-icon" size={20} />
             </FieldShell>
@@ -375,6 +444,17 @@ export default function Home() {
                 onChange={(event) => setDepartment(event.target.value)}
               >
                 <option>컴퓨터공학과</option>
+              </select>
+              <ChevronDown className="select-icon" size={20} />
+            </FieldShell>
+
+            <FieldShell icon={<CalendarDays size={24} />} label="범위">
+              <select value={grade} onChange={(event) => setGrade(event.target.value)}>
+                <option>전체</option>
+                <option value="1">1학년</option>
+                <option value="2">2학년</option>
+                <option value="3">3학년</option>
+                <option value="4">4학년</option>
               </select>
               <ChevronDown className="select-icon" size={20} />
             </FieldShell>
@@ -454,7 +534,7 @@ export default function Home() {
               <ReportMeta
                 icon={<Users size={18} />}
                 label="비교 대상"
-                value="동일 전공 학생"
+                value="10개 대학 커리큘럼"
               />
             </div>
 
@@ -553,6 +633,8 @@ export default function Home() {
                 "전공 관련 스터디나 동아리 활동 참여가 적습니다. 네트워킹과 협업 경험을 늘려보세요.",
               ]}
             />
+
+            <CurriculumRankingPanel similarity={activeInsight.curriculumSimilarity} />
 
             <section className="locked-report result-lock">
               <div>
@@ -776,7 +858,13 @@ function AppDashboard({
 
         <div className="premium-card">
           <div className="premium-icon">
-            <Gem size={24} />
+            <Image
+              src="/assets/stat-certificate.webp"
+              alt=""
+              width={52}
+              height={52}
+              unoptimized
+            />
           </div>
           <strong>프리미엄 멤버십</strong>
           <p>더 많은 분석과 인사이트를 경험해보세요.</p>
@@ -799,7 +887,15 @@ function AppDashboard({
               <span />
             </button>
             <div className="app-profile">
-              <div className="avatar">김</div>
+              <div className="avatar">
+                <Image
+                  src="/assets/avatar-peer-1.webp"
+                  alt=""
+                  width={42}
+                  height={42}
+                  unoptimized
+                />
+              </div>
               <strong>{profileName}</strong>
               <ChevronDown size={18} />
             </div>
@@ -807,6 +903,15 @@ function AppDashboard({
         </div>
 
         <section className="distribution-card">
+          <Image
+            className="distribution-art"
+            src="/assets/dashboard-distribution.webp"
+            alt=""
+            fill
+            sizes="(max-width: 980px) 100vw, calc(100vw - 250px)"
+            priority
+            unoptimized
+          />
           <div className="distribution-meta">
             <Info size={18} />
             <span>기준: 컴퓨터공학 계열 · 2,345명</span>
@@ -848,24 +953,26 @@ function AppDashboard({
         </section>
 
         <div className="stat-grid">
-          {dashboardStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <article className="stat-card" key={stat.label}>
-                <div className="stat-card-icon">
-                  <Icon size={24} />
-                </div>
-                <div>
-                  <h3>{stat.label}</h3>
-                  <strong>{stat.value}</strong>
-                </div>
-                <footer>
-                  <span>{stat.rank}</span>
-                  <small className={stat.deltaTone}>{stat.delta}</small>
-                </footer>
-              </article>
-            );
-          })}
+          {dashboardStats.map((stat) => (
+            <article className="stat-card" key={stat.label}>
+              <Image
+                className="stat-card-art"
+                src={stat.asset}
+                alt=""
+                width={58}
+                height={58}
+                unoptimized
+              />
+              <div>
+                <h3>{stat.label}</h3>
+                <strong>{stat.value}</strong>
+              </div>
+              <footer>
+                <span>{stat.rank}</span>
+                <small className={stat.deltaTone}>{stat.delta}</small>
+              </footer>
+            </article>
+          ))}
         </div>
 
         <section className="similar-users">
@@ -877,9 +984,16 @@ function AppDashboard({
             </button>
           </div>
           <div className="similar-user-grid">
-            {peers.map((peer) => (
+            {peers.map((peer, index) => (
               <article className="similar-user-card" key={peer.id}>
-                <div className="peer-avatar">{peer.name.slice(0, 1)}</div>
+                <Image
+                  className="peer-avatar"
+                  src={`/assets/avatar-peer-${index + 1}.webp`}
+                  alt=""
+                  width={62}
+                  height={62}
+                  unoptimized
+                />
                 <h3>{peer.name}</h3>
                 <p>{peer.schoolHidden}</p>
                 <div className="peer-chip-row">
@@ -921,7 +1035,7 @@ const dashboardStats = [
     rank: "상위 68%",
     delta: "▲ 12%",
     deltaTone: "positive",
-    icon: Trophy,
+    asset: "/assets/stat-contest.webp",
   },
   {
     label: "어학성적",
@@ -929,7 +1043,7 @@ const dashboardStats = [
     rank: "상위 63%",
     delta: "▲ 7%",
     deltaTone: "positive",
-    icon: Globe2,
+    asset: "/assets/stat-language.webp",
   },
   {
     label: "프로젝트 수",
@@ -937,7 +1051,7 @@ const dashboardStats = [
     rank: "상위 71%",
     delta: "▲ 9%",
     deltaTone: "positive",
-    icon: Code2,
+    asset: "/assets/stat-project.webp",
   },
   {
     label: "자격증 수",
@@ -945,7 +1059,7 @@ const dashboardStats = [
     rank: "상위 54%",
     delta: "— 0%",
     deltaTone: "neutral",
-    icon: CheckCircle2,
+    asset: "/assets/stat-certificate.webp",
   },
 ];
 
@@ -1092,6 +1206,82 @@ function ReportNotice({
         ))}
       </ul>
     </section>
+  );
+}
+
+function CurriculumRankingPanel({
+  similarity,
+}: {
+  similarity: Insight["curriculumSimilarity"];
+}) {
+  const topRankings = similarity.rankings.slice(0, 5);
+
+  return (
+    <section className="curriculum-ranking">
+      <div className="section-heading-row">
+        <div>
+          <p className="eyebrow">커리큘럼 유사도</p>
+          <h3>
+            {similarity.base.school} {similarity.base.department}와 가까운 학교
+          </h3>
+          <span>
+            기준 과목 {similarity.base.courseCount}개 ·{" "}
+            {similarity.base.filters.grade
+              ? `${similarity.base.filters.grade}학년 필터`
+              : "전체 학년"}
+          </span>
+        </div>
+        <strong>{topRankings.length}개 결과</strong>
+      </div>
+
+      <div className="curriculum-ranking-list">
+        {topRankings.map((item) => (
+          <article className="curriculum-rank-card" key={`${item.school}-${item.department}`}>
+            <div className="rank-main">
+              <span>{item.rank}</span>
+              <div>
+                <h4>
+                  {item.school}
+                  <small>{item.department}</small>
+                </h4>
+                <p>
+                  공통 과목:{" "}
+                  {item.sharedCourses.length > 0
+                    ? item.sharedCourses.slice(0, 4).join(", ")
+                    : "직접 일치 과목 적음"}
+                </p>
+              </div>
+            </div>
+
+            <div className="rank-score">
+              <strong>{Math.round(item.score * 100)}</strong>
+              <span>점</span>
+            </div>
+
+            <div className="rank-components">
+              <MetricPill label="의미" value={item.components.semantic} />
+              <MetricPill label="과목" value={item.components.jaccard} />
+              <MetricPill label="분야" value={item.components.area} />
+              <MetricPill label="학기" value={item.components.structure} />
+            </div>
+
+            <div className="rank-tags">
+              {item.sharedAreas.slice(0, 4).map((area) => (
+                <span key={area}>{area}</span>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: number }) {
+  return (
+    <span>
+      {label} <b>{Math.round(value * 100)}</b>
+    </span>
   );
 }
 

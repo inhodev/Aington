@@ -2,7 +2,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
+import {
+  buildCurriculumSimilarityFromDatabase,
+} from "./data/curriculumSimilarity.js";
 import { buildInsight } from "./data/demo.js";
+import { prisma } from "./lib/prisma.js";
 import { Profile } from "./models/Profile.js";
 
 dotenv.config();
@@ -19,6 +23,11 @@ app.use(
 app.use(express.json());
 
 async function connectMongo() {
+  if (prisma) {
+    console.log("Neon Postgres configured. Skipping MongoDB connection.");
+    return false;
+  }
+
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     console.log("MongoDB URI not set. Using in-memory demo storage.");
@@ -48,34 +57,72 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "career-scope-api",
     storage:
-      mongoose.connection.readyState === 1 ? "mongodb" : "memory-demo-fallback",
+      prisma
+        ? "neon-postgres"
+        : mongoose.connection.readyState === 1
+          ? "mongodb"
+          : "memory-demo-fallback",
   });
 });
 
-app.get("/api/insights", (req, res) => {
+app.get("/api/insights", async (req, res) => {
   const school = typeof req.query.school === "string" ? req.query.school : "";
   const department =
     typeof req.query.department === "string" ? req.query.department : "";
+  const grade = typeof req.query.grade === "string" ? req.query.grade : "";
+  const semester =
+    typeof req.query.semester === "string" ? req.query.semester : "";
+  const yearTerm =
+    typeof req.query.yearTerm === "string" ? req.query.yearTerm : "";
 
-  res.json(buildInsight(school, department));
+  const options = {
+    grade: grade || undefined,
+    semester: semester || undefined,
+    yearTerm: yearTerm || undefined,
+  };
+  const insight = buildInsight(school, department, options);
+  const curriculumSimilarity = await buildCurriculumSimilarityFromDatabase({
+    school,
+    department,
+    ...options,
+  });
+
+  res.json({ ...insight, curriculumSimilarity });
+});
+
+app.get("/api/curriculum-similarity", async (req, res) => {
+  const school = typeof req.query.school === "string" ? req.query.school : "";
+  const department =
+    typeof req.query.department === "string" ? req.query.department : "";
+  const grade = typeof req.query.grade === "string" ? req.query.grade : "";
+  const semester =
+    typeof req.query.semester === "string" ? req.query.semester : "";
+  const yearTerm =
+    typeof req.query.yearTerm === "string" ? req.query.yearTerm : "";
+
+  res.json(
+    await buildCurriculumSimilarityFromDatabase({
+      school,
+      department,
+      grade: grade || undefined,
+      semester: semester || undefined,
+      yearTerm: yearTerm || undefined,
+    }),
+  );
 });
 
 app.post("/api/signup", async (req, res) => {
   const body = req.body as Record<string, unknown>;
-  const required = [
-    "school",
-    "department",
-    "email",
-    "name",
-    "role",
-    "interest",
-    "wantsToMeet",
-    "intro",
-  ];
-
-  const profile = Object.fromEntries(
-    required.map((key) => [key, requireString(body, key)]),
-  );
+  const profile = {
+    school: requireString(body, "school"),
+    department: requireString(body, "department"),
+    email: requireString(body, "email"),
+    name: requireString(body, "name"),
+    role: requireString(body, "role"),
+    interest: requireString(body, "interest"),
+    wantsToMeet: requireString(body, "wantsToMeet"),
+    intro: requireString(body, "intro"),
+  };
 
   const missing = Object.entries(profile)
     .filter(([, value]) => !value)
@@ -86,10 +133,34 @@ app.post("/api/signup", async (req, res) => {
   }
 
   const payload = {
-    ...profile,
+    school: profile.school as string,
+    department: profile.department as string,
+    email: profile.email as string,
+    name: profile.name as string,
+    role: profile.role as string,
+    interest: profile.interest as string,
+    wantsToMeet: profile.wantsToMeet as string,
+    intro: profile.intro as string,
     portfolio:
       typeof body.portfolio === "string" ? body.portfolio.trim() : "",
   };
+
+  if (prisma) {
+    const saved = await prisma.profile.create({
+      data: {
+        school: payload.school,
+        department: payload.department,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+        interest: payload.interest,
+        wantsToMeet: payload.wantsToMeet,
+        intro: payload.intro,
+        portfolio: payload.portfolio,
+      },
+    });
+    return res.status(201).json({ id: saved.id, profile: saved });
+  }
 
   if (mongoose.connection.readyState === 1) {
     const saved = await Profile.create(payload);
