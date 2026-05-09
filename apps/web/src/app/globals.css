@@ -3991,7 +3991,7 @@ button {
   backdrop-filter: blur(2px);
 }
 
-.compare-lock-overlay > div {
+.compare-lock-overlay > .compare-lock-icon {
   display: grid;
   place-items: center;
   width: 96px;
