@@ -14,18 +14,21 @@ import {
   ChevronRight,
   Code2,
   Download,
+  EyeOff,
+  Folder,
   Globe2,
   GraduationCap,
   HomeIcon,
   Info,
   Lightbulb,
   LockKeyhole,
+  Mail,
   MessageSquareText,
   Scale,
-  School,
   Send,
   Settings,
   ShieldCheck,
+  Tag,
   Target,
   ThumbsUp,
   Trophy,
@@ -36,7 +39,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Insight = {
   target: {
@@ -204,6 +207,20 @@ const networkFilterCopy: Record<
       "“사이드프로젝트로 작게 출시까지 해볼 팀원을 찾고 있어요. 관심 분야가 맞아서 같이 이야기해보고 싶습니다.”",
   },
 };
+
+const avatarPalette = ["#4F46E5", "#7C3AED", "#10B981", "#F59E0B", "#F43F5E"];
+
+const privacySettings: Array<{ label: string; icon: LucideIcon; checked: boolean }> = [
+  { label: "학교명은 익명 처리", icon: EyeOff, checked: true },
+  { label: "포트폴리오 미리보기만 공개", icon: Folder, checked: true },
+  { label: "수락 후 연락처 공개", icon: Mail, checked: true },
+];
+
+const notificationSettings: Array<{ label: string; icon: LucideIcon; checked: boolean }> = [
+  { label: "새 편지 도착", icon: Bell, checked: true },
+  { label: "추천 동료 업데이트", icon: Users, checked: true },
+  { label: "심화 리포트 할인 알림", icon: Tag, checked: false },
+];
 
 const fallbackInsight: Insight = {
   target: {
@@ -412,7 +429,7 @@ export default function Home() {
     setStep("analyzing");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    const delay = new Promise((resolve) => window.setTimeout(resolve, 2100));
+    const delay = new Promise((resolve) => window.setTimeout(resolve, 4500));
 
     try {
       const query = new URLSearchParams({
@@ -543,58 +560,72 @@ export default function Home() {
           </div>
 
           <div className="analyze-panel" aria-label="커리어 분석 입력">
-            <FieldShell icon={<School size={24} />} label="학교">
-              <select value={school} onChange={(event) => setSchool(event.target.value)}>
-                <option>인하대학교</option>
-                <option>서울대학교</option>
-                <option>연세대학교</option>
-                <option>고려대학교</option>
-                <option>한양대학교</option>
-                <option>아주대학교</option>
-                <option>인천대학교</option>
-                <option>가천대학교</option>
-                <option>경기대학교</option>
-                <option>용인대학교</option>
-              </select>
-              <ChevronDown className="select-icon" size={20} />
-            </FieldShell>
+            <CustomDropdown
+              icon="🏫"
+              label="학교"
+              placeholder="학교를 선택하세요"
+              value={school}
+              options={[
+                "인하대학교",
+                "서울대학교",
+                "연세대학교",
+                "고려대학교",
+                "한양대학교",
+                "아주대학교",
+                "인천대학교",
+                "가천대학교",
+                "경기대학교",
+                "용인대학교",
+              ]}
+              popularOptions={["인하대학교", "서울대학교", "연세대학교"]}
+              onChange={setSchool}
+            />
 
-            <FieldShell icon={<BookOpen size={24} />} label="학과">
-              <select
-                value={department}
-                onChange={(event) => setDepartment(event.target.value)}
-              >
-                <option>컴퓨터공학과</option>
-              </select>
-              <ChevronDown className="select-icon" size={20} />
-            </FieldShell>
+            <CustomDropdown
+              icon="📚"
+              label="학과"
+              placeholder="학과를 선택하세요"
+              value={department}
+              options={["컴퓨터공학과"]}
+              popularOptions={["컴퓨터공학과"]}
+              onChange={setDepartment}
+            />
 
-            <FieldShell icon={<CalendarDays size={24} />} label="범위">
-              <select value={grade} onChange={(event) => setGrade(event.target.value)}>
-                <option>전체</option>
-                <option value="1">1학년</option>
-                <option value="2">2학년</option>
-                <option value="3">3학년</option>
-                <option value="4">4학년</option>
-              </select>
-              <ChevronDown className="select-icon" size={20} />
-            </FieldShell>
+            <CustomDropdown
+              icon="📅"
+              label="범위"
+              placeholder="분석 범위를 선택하세요"
+              value={grade}
+              options={["전체", "1학년", "2학년", "3학년", "4학년"]}
+              popularOptions={["전체", "3학년", "4학년"]}
+              onChange={(nextGrade) => {
+                setGrade(nextGrade === "전체" ? "전체" : nextGrade.replace("학년", ""));
+              }}
+              displayValue={grade === "전체" ? "전체" : `${grade}학년`}
+            />
 
             <button className="primary-cta" onClick={handleAnalyze}>
               <TrendingUp size={24} />
               커리어 분석 시작하기
+              <ArrowRight className="cta-arrow" size={22} />
             </button>
+
+            <div className="social-proof-badge" aria-label="분석 완료 사용자 수">
+              <span className="proof-avatar">김</span>
+              <span className="proof-avatar">이</span>
+              <span className="proof-avatar">박</span>
+              <strong>이미 2,847명이 분석했어요</strong>
+            </div>
           </div>
         </section>
       )}
 
       {step === "analyzing" && (
         <section className="analyzing-shell" aria-live="polite">
-          <div className="analysis-orbit">
+          <div className="analysis-equalizer" aria-hidden="true">
             <span />
             <span />
             <span />
-            <BarChart3 size={42} />
           </div>
           <p className="eyebrow">분석 리포트 생성 중</p>
           <h2>
@@ -602,13 +633,18 @@ export default function Home() {
             <br />
             커리어 신호를 불러오고 있어요
           </h2>
-          <div className="analysis-steps">
-            <span>전국 전공 평균 비교</span>
-            <span>커리큘럼 강점 계산</span>
-            <span>대외활동 신호 정리</span>
+          <div className="analysis-status">
+            <span>전국 커리큘럼 DB 검색 중...</span>
+            <span>비교군 데이터 매핑 중...</span>
+            <span>커리어 인사이트 생성 중...</span>
           </div>
           <div className="analysis-progress">
             <div />
+          </div>
+          <div className="analysis-skeleton-grid" aria-hidden="true">
+            <span className="skeleton-card" />
+            <span className="skeleton-card" />
+            <span className="skeleton-card" />
           </div>
         </section>
       )}
@@ -628,10 +664,12 @@ export default function Home() {
               <div className="report-identity">
                 <div className="university-seal">仁</div>
                 <div>
-                  <h2>
+                  <h1 className="report-title">
                     {activeInsight.target.school}
-                    <span>{activeInsight.target.department}</span>
-                  </h2>
+                    <span className="report-department-pill">
+                      {activeInsight.target.department}
+                    </span>
+                  </h1>
                   <p>{activeInsight.summary}</p>
                 </div>
               </div>
@@ -1079,15 +1117,13 @@ function AppDashboard({
               )}
             </div>
             <div className="app-profile">
-              <div className="avatar">
-                <Image
-                  src="/assets/avatar-peer-1.webp"
-                  alt=""
-                  width={42}
-                  height={42}
-                  unoptimized
-                />
-              </div>
+              <span
+                className="avatar initial-avatar"
+                style={{ "--avatar-color": "#4F46E5" } as React.CSSProperties}
+                aria-hidden="true"
+              >
+                {Array.from(profileName)[0]}
+              </span>
               <strong>{profileName}</strong>
               <ChevronDown size={18} />
             </div>
@@ -1114,8 +1150,8 @@ function AppDashboard({
             <svg viewBox="0 0 980 210" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="curveFill" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#2f3cf4" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#2f3cf4" stopOpacity="0.02" />
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <path
@@ -1131,10 +1167,11 @@ function AppDashboard({
               ))}
             </svg>
             <div className="position-marker">
-              <span>내 위치</span>
+              <span>
+                <strong>상위 72%</strong>
+                <small>컴퓨터공학 계열 2,345명 중</small>
+              </span>
               <b />
-              <strong>상위 72%</strong>
-              <small>보다 우수한 성과예요!</small>
             </div>
             <div className="curve-axis">
               {["0% 하위", "10%", "25%", "50% 평균", "75%", "90%", "100% 상위"].map(
@@ -1147,8 +1184,12 @@ function AppDashboard({
         </section>
 
         <div className="stat-grid">
-          {dashboardStats.map((stat) => (
-            <article className="stat-card" key={stat.label}>
+          {dashboardStats.map((stat, index) => (
+            <article
+              className="stat-card"
+              key={stat.label}
+              style={{ "--stat-accent": stat.accent } as React.CSSProperties}
+            >
               <Image
                 className="stat-card-art"
                 src={stat.asset}
@@ -1165,6 +1206,16 @@ function AppDashboard({
                 <span>{stat.rank}</span>
                 <small className={stat.deltaTone}>{stat.delta}</small>
               </footer>
+              <svg
+                className="stat-sparkline"
+                viewBox="0 0 60 24"
+                role="img"
+                aria-label={`${stat.label} 추세`}
+              >
+                <polyline
+                  points={dashboardSparklines[index % dashboardSparklines.length]}
+                />
+              </svg>
             </article>
           ))}
         </div>
@@ -1185,17 +1236,25 @@ function AppDashboard({
                   aria-hidden={groupIndex === 1}
                   key={groupIndex}
                 >
-                  {peers.map((peer, index) => (
+                  {peers.map((peer, index) => {
+                    const matchingRate = peerMatchingRates[index % peerMatchingRates.length];
+                    return (
                     <article className="similar-user-card" key={`${peer.id}-${groupIndex}`}>
-                      <Image
-                        className="peer-avatar"
-                        src={`/assets/avatar-peer-${index + 1}.webp`}
-                        alt=""
-                        width={62}
-                        height={62}
-                        unoptimized
-                      />
+                      <span
+                          className="peer-avatar initial-avatar"
+                          style={
+                            {
+                              "--avatar-color": avatarPalette[index % avatarPalette.length],
+                            } as React.CSSProperties
+                          }
+                          aria-hidden="true"
+                      >
+                        {Array.from(peer.name)[0]}
+                      </span>
                       <h3>{peer.name}</h3>
+                      <span className={`match-badge ${getMatchBadgeTone(matchingRate)}`}>
+                        {matchingRate}% 매칭
+                      </span>
                       <p>{peer.schoolHidden}</p>
                       <div className="peer-chip-row">
                         {peer.tags.slice(0, 3).map((tag) => (
@@ -1211,7 +1270,8 @@ function AppDashboard({
                         편지 보내기
                       </button>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -1388,12 +1448,28 @@ function DeepReportPreview({ onUnlock }: { onUnlock: () => void }) {
             </div>
           </div>
           <div className="compare-lock-overlay">
-            <div>
-              <LockKeyhole size={42} />
+            <div className="compare-lock-icon">
+              <LockKeyhole size={32} />
             </div>
             <h3>심화 리포트 결제 후 확인</h3>
             <p>비교 보기, 학교별 활동 조합, 포트폴리오 보완 우선순위가 함께 열립니다.</p>
+            <ul className="locked-feature-list">
+              <li>
+                <CheckCircle2 size={16} />
+                타학교 비교 상세 데이터
+              </li>
+              <li>
+                <CheckCircle2 size={16} />
+                상위 20% 활동 조합 분석
+              </li>
+              <li>
+                <CheckCircle2 size={16} />
+                맞춤 커리큘럼 추천
+              </li>
+            </ul>
+            <small className="unlock-note">1회 구매 · 환불 불가</small>
             <button onClick={onUnlock} type="button">
+              <span aria-hidden="true">🔓</span>
               심화 리포트 잠금 해제하기 · 4,900원
             </button>
           </div>
@@ -1463,25 +1539,29 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
 
           <div className="networking-grid">
             {filteredPeers.map((peer) => {
-              const avatarIndex = featuredPeers.findIndex((item) => item.id === peer.id) + 1;
+              const avatarIndex = featuredPeers.findIndex((item) => item.id === peer.id);
               return (
                 <article className="networking-card" key={peer.id}>
                   <header>
-                    <Image
-                      src={`/assets/avatar-peer-${avatarIndex}.webp`}
-                      alt=""
-                      width={58}
-                      height={58}
-                      unoptimized
-                    />
+                    <span
+                      className="networking-avatar initial-avatar"
+                      style={
+                        { "--avatar-color": avatarPalette[avatarIndex % avatarPalette.length] } as React.CSSProperties
+                      }
+                      aria-hidden="true"
+                    >
+                      {Array.from(peer.name)[0]}
+                    </span>
                     <div>
                       <h3>{peer.name}</h3>
                       <p>{peer.schoolHidden}</p>
                     </div>
-                    <strong>{peer.matchScore}%</strong>
+                    <strong className={`networking-match ${getMatchBadgeTone(peer.matchScore)}`}>
+                      {peer.matchScore}%
+                    </strong>
                   </header>
                   <div className="networking-intent">
-                    <Target size={16} />
+                    <span aria-hidden="true">◎</span>
                     {peer.intent}
                   </div>
                   <p>{peer.note}</p>
@@ -1497,7 +1577,7 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
                       onClick={() => setSentPeerId(peer.id)}
                       type="button"
                     >
-                      <MessageSquareText size={16} />
+                      <Mail size={16} />
                       {sentPeerId === peer.id ? "요청 보냄" : "편지 보내기"}
                     </button>
                   </footer>
@@ -1512,11 +1592,23 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
             <div className="section-title">
               <Bell size={20} />
               <h3>요청함</h3>
+              <span className="request-count-badge">{networkRequests.length}</span>
             </div>
-            {networkRequests.map((request) => (
+            {networkRequests.map((request, index) => (
               <div className="network-request" key={request.name}>
-                <strong>{request.name}</strong>
-                <p>{request.message}</p>
+                <span
+                  className="request-avatar initial-avatar"
+                  style={
+                    { "--avatar-color": avatarPalette[index % avatarPalette.length] } as React.CSSProperties
+                  }
+                  aria-hidden="true"
+                >
+                  {Array.from(request.name)[0]}
+                </span>
+                <div className="request-copy">
+                  <strong>{request.name}</strong>
+                  <p>{request.message}</p>
+                </div>
                 <div>
                   <button type="button">수락</button>
                   <button type="button">나중에</button>
@@ -1532,7 +1624,7 @@ function NetworkingPage({ peers }: { peers: Insight["peers"] }) {
             </div>
             <p>{activeFilterCopy.template}</p>
             <button type="button">
-              <Send size={16} />
+              <span aria-hidden="true">✉</span>
               템플릿으로 시작
             </button>
           </section>
@@ -1550,14 +1642,21 @@ function SettingsPage() {
           <ShieldCheck size={22} />
           <h3>공개 범위</h3>
         </div>
-        {["학교명은 익명 처리", "포트폴리오 미리보기만 공개", "수락 후 연락처 공개"].map(
-          (item) => (
-            <label className="settings-row" key={item}>
-              <span>{item}</span>
-              <input defaultChecked type="checkbox" />
+        {privacySettings.map((item) => {
+          const Icon = item.icon;
+          return (
+            <label className="settings-row" key={item.label}>
+              <span className="settings-icon">
+                <Icon size={18} />
+              </span>
+              <span>{item.label}</span>
+              <input defaultChecked={item.checked} type="checkbox" />
+              <span className="toggle-track" aria-hidden="true">
+                <span />
+              </span>
             </label>
-          ),
-        )}
+          );
+        })}
       </article>
 
       <article className="settings-card">
@@ -1565,12 +1664,21 @@ function SettingsPage() {
           <Bell size={22} />
           <h3>알림</h3>
         </div>
-        {["새 편지 도착", "추천 동료 업데이트", "심화 리포트 할인 알림"].map((item, index) => (
-          <label className="settings-row" key={item}>
-            <span>{item}</span>
-            <input defaultChecked={index < 2} type="checkbox" />
-          </label>
-        ))}
+        {notificationSettings.map((item) => {
+          const Icon = item.icon;
+          return (
+            <label className="settings-row" key={item.label}>
+              <span className="settings-icon">
+                <Icon size={18} />
+              </span>
+              <span>{item.label}</span>
+              <input defaultChecked={item.checked} type="checkbox" />
+              <span className="toggle-track" aria-hidden="true">
+                <span />
+              </span>
+            </label>
+          );
+        })}
       </article>
     </section>
   );
@@ -1580,19 +1688,22 @@ function ProfilePage() {
   return (
     <section className="profile-page">
       <article className="profile-main-card">
-        <Image
-          className="profile-large-avatar"
-          src="/assets/avatar-peer-1.webp"
-          alt=""
-          width={176}
-          height={176}
-          unoptimized
-        />
+        <div className="profile-avatar-shell">
+          <Image
+            className="profile-large-avatar"
+            src="/assets/avatar-peer-1.webp"
+            alt=""
+            width={176}
+            height={176}
+            unoptimized
+          />
+          <span aria-hidden="true" />
+        </div>
         <h2>김O현</h2>
         <div className="profile-tag-row">
           {["백엔드 개발자", "데이터 분석", "PM/기획", "문제 해결", "협업 지향", "성장 지향"].map(
             (tag) => (
-              <span key={tag}>{tag}</span>
+              <span className={getProfileTagTone(tag)} key={tag}>{tag}</span>
             ),
           )}
         </div>
@@ -1607,7 +1718,7 @@ function ProfilePage() {
         </div>
         <div className="hidden-school-card">
           <LockKeyhole size={20} />
-          대학교 정보 비공개
+          <span>비공개 처리됨</span>
         </div>
         <button className="profile-primary-button" type="button">
           <Send size={19} />
@@ -1665,14 +1776,14 @@ function ProfilePage() {
               <article className={`portfolio-card ${item.locked ? "locked" : ""}`} key={item.title}>
                 <div className="portfolio-image-wrap">
                   <Image src={item.image} alt="" width={520} height={330} unoptimized />
+                  <span className="portfolio-category">{item.category}</span>
                   {item.locked && (
                     <div className="portfolio-lock">
                       <LockKeyhole size={24} />
-                      <strong>미리보기가 제한된 포트폴리오입니다.</strong>
+                      <strong>🔒 프리미엄에서 확인</strong>
                     </div>
                   )}
                 </div>
-                <span className="portfolio-category">{item.category}</span>
                 <h3>{item.title}</h3>
                 <p>{item.description}</p>
                 <div className="portfolio-tech-row">
@@ -1820,7 +1931,7 @@ const portfolioItems = [
     title: "실시간 공공 데이터 대시보드",
     description: "공공데이터 API를 활용한 실시간 시각화 대시보드 서비스",
     category: "개발",
-    date: "2024.03",
+    date: "'24년 3월",
     image: "/assets/portfolio-dashboard.webp",
     tech: ["Python", "FastAPI", "React"],
   },
@@ -1828,7 +1939,7 @@ const portfolioItems = [
     title: "스터디 매칭 플랫폼 '스터디온'",
     description: "관심사 기반 스터디 매칭 및 일정 관리 서비스",
     category: "프로젝트",
-    date: "2024.01",
+    date: "'24년 1월",
     image: "/assets/portfolio-matching.webp",
     tech: ["Next.js", "TypeScript", "Tailwind"],
   },
@@ -1836,7 +1947,7 @@ const portfolioItems = [
     title: "AI 기반 이력서 분석 서비스",
     description: "채용 공고에 맞춘 이력서 분석 및 개선 가이드 제공",
     category: "개인 프로젝트",
-    date: "2023.11",
+    date: "'23년 11월",
     image: "/assets/portfolio-ai-resume.webp",
     tech: ["Python", "LangChain", "OpenAI"],
   },
@@ -1844,7 +1955,7 @@ const portfolioItems = [
     title: "팀 협업 API 서버",
     description: "권한 관리와 알림 기능을 포함한 협업 백엔드 API",
     category: "개발",
-    date: "2023.10",
+    date: "'23년 10월",
     image: "/assets/portfolio-dashboard.webp",
     tech: ["Node.js", "MongoDB"],
   },
@@ -1852,7 +1963,7 @@ const portfolioItems = [
     title: "E-commerce 백엔드 API",
     description: "소형몰 서비스 백엔드 API 개발",
     category: "개발",
-    date: "2023.09",
+    date: "'23년 9월",
     image: "/assets/portfolio-matching.webp",
     tech: ["Spring Boot", "MySQL"],
     locked: true,
@@ -1861,7 +1972,7 @@ const portfolioItems = [
     title: "사용자 행동 분석 리포트",
     description: "로그 데이터 기반 사용자 행동 분석 및 인사이트 도출",
     category: "데이터 분석",
-    date: "2023.07",
+    date: "'23년 7월",
     image: "/assets/portfolio-ai-resume.webp",
     tech: ["Python", "Pandas"],
     locked: true,
@@ -1919,6 +2030,7 @@ const dashboardStats = [
     rank: "상위 68%",
     delta: "▲ 12%",
     deltaTone: "positive",
+    accent: "#4F46E5",
     asset: "/assets/stat-contest.webp",
   },
   {
@@ -1927,6 +2039,7 @@ const dashboardStats = [
     rank: "상위 63%",
     delta: "▲ 7%",
     deltaTone: "positive",
+    accent: "#10B981",
     asset: "/assets/stat-language.webp",
   },
   {
@@ -1935,6 +2048,7 @@ const dashboardStats = [
     rank: "상위 71%",
     delta: "▲ 9%",
     deltaTone: "positive",
+    accent: "#7C3AED",
     asset: "/assets/stat-project.webp",
   },
   {
@@ -1943,9 +2057,19 @@ const dashboardStats = [
     rank: "상위 54%",
     delta: "— 0%",
     deltaTone: "neutral",
+    accent: "#F59E0B",
     asset: "/assets/stat-certificate.webp",
   },
 ];
+
+const dashboardSparklines = [
+  "2,18 28,10 58,6",
+  "2,16 28,8 58,12",
+  "2,20 28,13 58,4",
+  "2,12 28,12 58,11",
+];
+
+const peerMatchingRates = [94, 88, 79, 91, 83];
 
 const dashboardExtraPeers: Insight["peers"] = [
   {
@@ -2067,9 +2191,10 @@ function ScoreRow({
   metric: ReportMetric;
 }) {
   const Icon = metric.icon;
+  const tone = getScoreTone(metric.score);
   return (
-    <div className="score-row">
-      <span>
+    <div className={`score-row ${tone}`}>
+      <span className="score-row-icon">
         <Icon size={20} />
       </span>
       <strong>{metric.label}</strong>
@@ -2102,7 +2227,7 @@ function ReportNotice({
       <ul>
         {items.map((item) => (
           <li key={item}>
-            {tone === "good" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span className="notice-item-icon">{tone === "good" ? "✓" : "!"}</span>
             {item}
           </li>
         ))}
@@ -2203,18 +2328,19 @@ function CurriculumRankingPanel({
         {topRankings.map((item) => (
           <article className="curriculum-rank-card" key={`${item.school}-${item.department}`}>
             <div className="rank-main">
-              <span>{item.rank}</span>
+              <span className="rank-number">{item.rank}</span>
               <div>
                 <h4>
                   {item.school}
                   <small>{item.department}</small>
                 </h4>
-                <p>
-                  공통 과목:{" "}
+                <div className="rank-shared-courses" aria-label="공통 과목">
                   {item.sharedCourses.length > 0
-                    ? item.sharedCourses.slice(0, 4).join(", ")
-                    : "직접 일치 과목 적음"}
-                </p>
+                    ? item.sharedCourses.slice(0, 4).map((course) => (
+                        <span key={course}>{course}</span>
+                      ))
+                    : <span>직접 일치 과목 적음</span>}
+                </div>
               </div>
             </div>
 
@@ -2250,23 +2376,144 @@ function MetricPill({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FieldShell({
+function getScoreTone(score: number) {
+  if (score >= 75) {
+    return "score-high";
+  }
+  if (score >= 50) {
+    return "score-mid";
+  }
+  return "score-low";
+}
+
+function getMatchBadgeTone(rate: number) {
+  if (rate >= 90) {
+    return "match-high";
+  }
+  if (rate >= 80) {
+    return "match-mid";
+  }
+  return "match-low";
+}
+
+function getProfileTagTone(tag: string) {
+  if (tag.includes("개발") || tag.includes("백엔드") || tag.includes("프론트엔드")) {
+    return "tag-dev";
+  }
+  if (tag.includes("데이터") || tag.includes("AI")) {
+    return "tag-data";
+  }
+  if (tag.includes("PM") || tag.includes("기획")) {
+    return "tag-pm";
+  }
+  if (tag.includes("디자인")) {
+    return "tag-design";
+  }
+  return "tag-etc";
+}
+
+function CustomDropdown({
   icon,
   label,
-  children,
+  placeholder,
+  value,
+  displayValue,
+  options,
+  popularOptions,
+  onChange,
 }: {
-  icon: React.ReactNode;
+  icon: string;
   label: string;
-  children: React.ReactNode;
+  placeholder: string;
+  value: string;
+  displayValue?: string;
+  options: string[];
+  popularOptions: string[];
+  onChange: (value: string) => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const selectedText = displayValue || value;
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function closeOnOutsideInteraction(event: MouseEvent) {
+      if (!selectRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideInteraction);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideInteraction);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  function selectOption(option: string) {
+    onChange(option);
+    setIsOpen(false);
+  }
+
   return (
-    <label className="field-shell">
-      <span className="field-label">
-        {icon}
-        {label}
-      </span>
-      <span className="field-control">{children}</span>
-    </label>
+    <div className={`custom-select ${isOpen ? "open" : ""}`} ref={selectRef}>
+      <button
+        className={`custom-select-trigger ${selectedText ? "selected" : ""}`}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span className="custom-select-label">
+          <span className="custom-select-icon" aria-hidden="true">
+            {icon}
+          </span>
+          <span>{label}</span>
+        </span>
+        <span className="custom-select-value">{selectedText || placeholder}</span>
+        <ChevronDown className="custom-select-chevron" size={20} />
+      </button>
+
+      {isOpen && (
+        <div className="custom-select-menu" role="listbox" aria-label={label}>
+          <div className="popular-options" aria-label="인기 옵션">
+            {popularOptions.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={option === selectedText ? "active" : ""}
+                onClick={() => selectOption(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <div className="select-option-list">
+            {options.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={option === selectedText}
+                onClick={() => selectOption(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
