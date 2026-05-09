@@ -13,21 +13,25 @@ import {
   ChevronRight,
   Code2,
   Download,
+  Gem,
   Globe2,
   GraduationCap,
   HomeIcon,
   Info,
   LockKeyhole,
-  Mail,
   MessageSquareText,
+  Scale,
   School,
+  Settings,
+  ShieldCheck,
   ThumbsUp,
   Trophy,
   TrendingUp,
+  UploadCloud,
   User,
   Users,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Insight = {
   target: {
@@ -73,9 +77,27 @@ type Insight = {
   }>;
 };
 
-type Step = "landing" | "analyzing" | "report" | "signup" | "dashboard";
+type Step =
+  | "landing"
+  | "analyzing"
+  | "report"
+  | "signupNotice"
+  | "signup"
+  | "dashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const fieldChips = [
+  "AI",
+  "개발",
+  "디자인",
+  "마케팅",
+  "창업",
+  "기획",
+  "PM",
+  "데이터",
+  "사이드프로젝트",
+  "취업준비",
+];
 
 const fallbackInsight: Insight = {
   target: {
@@ -181,18 +203,55 @@ export default function Home() {
   const [department, setDepartment] = useState("컴퓨터공학과");
   const [insight, setInsight] = useState<Insight | null>(null);
   const [profileName, setProfileName] = useState("김하늘");
+  const [introLength, setIntroLength] = useState(43);
+  const [interestChips, setInterestChips] = useState(["개발"]);
+  const [meetChips, setMeetChips] = useState(["개발"]);
 
   const activeInsight = insight || fallbackInsight;
-
-  const progressWidth = useMemo(
-    () => `${Math.min(activeInsight.dashboard.percentile, 100)}%`,
-    [activeInsight.dashboard.percentile],
-  );
 
   const radarPoints = useMemo(
     () => buildRadarPoints(reportMetrics.map((metric) => metric.score)),
     [],
   );
+
+  useEffect(() => {
+    const view = new URLSearchParams(window.location.search).get("view");
+    if (view === "report") {
+      const timer = window.setTimeout(() => {
+        setInsight(fallbackInsight);
+        setStep("report");
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    if (view === "signup") {
+      const timer = window.setTimeout(() => setStep("signup"), 0);
+      return () => window.clearTimeout(timer);
+    }
+    if (view === "notice") {
+      const timer = window.setTimeout(() => setStep("signupNotice"), 0);
+      return () => window.clearTimeout(timer);
+    }
+    if (view === "dashboard") {
+      const timer = window.setTimeout(() => {
+        setInsight(fallbackInsight);
+        setStep("dashboard");
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step !== "signupNotice") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setStep("signup");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 1100);
+
+    return () => window.clearTimeout(timer);
+  }, [step]);
 
   async function handleAnalyze() {
     setStep("analyzing");
@@ -229,13 +288,13 @@ export default function Home() {
     const payload = {
       school,
       department,
-      email: String(form.get("email") || ""),
-      name: String(form.get("name") || ""),
+      email: "student@inha.edu",
+      name: "김하늘",
       role: String(form.get("role") || ""),
-      interest: String(form.get("interest") || ""),
-      wantsToMeet: String(form.get("wantsToMeet") || ""),
+      interest: interestChips.join(", "),
+      wantsToMeet: meetChips.join(", "),
       intro: String(form.get("intro") || ""),
-      portfolio: String(form.get("portfolio") || ""),
+      portfolio: "demo-portfolio-upload.pdf",
     };
 
     setProfileName(payload.name || "김하늘");
@@ -254,9 +313,33 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function toggleChip(kind: "interest" | "meet", chip: string) {
+    const [values, setValues] =
+      kind === "interest"
+        ? [interestChips, setInterestChips]
+        : [meetChips, setMeetChips];
+
+    if (values.includes(chip)) {
+      if (values.length === 1) {
+        return;
+      }
+      setValues(values.filter((value) => value !== chip));
+      return;
+    }
+
+    setValues([...values, chip]);
+  }
+
+  function continueToSignup() {
+    setStep("signup");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <main>
-      <Header active={step} onHome={() => setStep("landing")} />
+      {step !== "dashboard" && (
+        <Header active={step} onHome={() => setStep("landing")} />
+      )}
 
       {step === "landing" && (
         <section className="hero">
@@ -273,8 +356,8 @@ export default function Home() {
             </p>
           </div>
 
-            <div className="analyze-panel" aria-label="커리어 분석 입력">
-              <FieldShell icon={<School size={24} />} label="학교">
+          <div className="analyze-panel" aria-label="커리어 분석 입력">
+            <FieldShell icon={<School size={24} />} label="학교">
               <select value={school} onChange={(event) => setSchool(event.target.value)}>
                 <option>인하대학교</option>
                 <option>서울대학교</option>
@@ -358,9 +441,21 @@ export default function Home() {
             </div>
 
             <div className="report-meta-row">
-              <ReportMeta icon={<BookOpen size={18} />} label="분석 기준" value="전국 대학 평균" />
-              <ReportMeta icon={<CalendarDays size={18} />} label="분석 일자" value="2026.05.09" />
-              <ReportMeta icon={<Users size={18} />} label="비교 대상" value="동일 전공 학생" />
+              <ReportMeta
+                icon={<BookOpen size={18} />}
+                label="분석 기준"
+                value="전국 대학 평균"
+              />
+              <ReportMeta
+                icon={<CalendarDays size={18} />}
+                label="분석 일자"
+                value="2026.05.09"
+              />
+              <ReportMeta
+                icon={<Users size={18} />}
+                label="비교 대상"
+                value="동일 전공 학생"
+              />
             </div>
 
             <div className="report-stage">
@@ -383,9 +478,18 @@ export default function Home() {
               <section className="radar-panel" aria-label="전공 역량 레이더 차트">
                 <div className="radar-chart">
                   <svg viewBox="0 0 320 320" role="img" aria-label="전공 역량 점수">
-                    <polygon className="radar-grid" points="160,24 289,98 289,222 160,296 31,222 31,98" />
-                    <polygon className="radar-grid" points="160,60 258,116 258,204 160,260 62,204 62,116" />
-                    <polygon className="radar-grid" points="160,96 227,135 227,185 160,224 93,185 93,135" />
+                    <polygon
+                      className="radar-grid"
+                      points="160,24 289,98 289,222 160,296 31,222 31,98"
+                    />
+                    <polygon
+                      className="radar-grid"
+                      points="160,60 258,116 258,204 160,260 62,204 62,116"
+                    />
+                    <polygon
+                      className="radar-grid"
+                      points="160,96 227,135 227,185 160,224 93,185 93,135"
+                    />
                     <line x1="160" y1="160" x2="160" y2="24" />
                     <line x1="160" y1="160" x2="289" y2="98" />
                     <line x1="160" y1="160" x2="289" y2="222" />
@@ -394,15 +498,18 @@ export default function Home() {
                     <line x1="160" y1="160" x2="31" y2="98" />
                     <polygon className="radar-fill" points={radarPoints} />
                     <polygon className="radar-line" points={radarPoints} />
-                    {reportMetrics.map((metric) => (
-                      <circle
-                        className="radar-dot"
-                        cx={metric.point[0]}
-                        cy={metric.point[1]}
-                        key={metric.label}
-                        r="5"
-                      />
-                    ))}
+                    {reportMetrics.map((metric, index) => {
+                      const [x, y] = getRadarPoint(metric.score, index);
+                      return (
+                        <circle
+                          className="radar-dot"
+                          cx={x}
+                          cy={y}
+                          key={metric.label}
+                          r="5"
+                        />
+                      );
+                    })}
                   </svg>
                   {reportMetrics.map((metric) => (
                     <div className={`radar-label ${metric.position}`} key={metric.label}>
@@ -460,7 +567,7 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              <button className="secondary-cta" onClick={() => setStep("signup")}>
+              <button className="secondary-cta" onClick={() => setStep("signupNotice")}>
                 다른 학교 학생과 비교하기
                 <ArrowRight size={20} />
               </button>
@@ -469,138 +576,125 @@ export default function Home() {
         </section>
       )}
 
-      {step === "signup" && (
-        <section className="signup-shell">
-          <div className="signup-copy">
-            <p className="eyebrow">회원가입 후 비교 리포트 열기</p>
-            <h2>학교 메일 인증과 기본 소개로 비슷한 계열 학생을 찾아요.</h2>
+      {step === "signupNotice" && (
+        <section className="signup-notice-shell" aria-live="polite">
+          <div className="signup-notice-card">
+            <div className="notice-mark">
+              <ShieldCheck size={42} />
+            </div>
+            <p className="eyebrow">회원가입 필요</p>
+            <h2>다른 학교 학생과 비교하려면 회원가입이 필요해요</h2>
             <p>
-              실제 메일 발송은 데모에서 생략하고, 가입 후 바로 메인 화면으로
-              이동합니다.
+              기본 정보를 입력하면 같은 계열 학생 비교와 매칭 추천을 이어서 볼 수
+              있어요.
             </p>
+            <div className="notice-loader">
+              <div />
+            </div>
+            <button className="secondary-cta" onClick={continueToSignup}>
+              회원가입 계속하기
+              <ArrowRight size={20} />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === "signup" && (
+        <section className="onboarding-shell">
+          <div className="onboarding-steps" aria-label="회원가입 온보딩 단계">
+            <OnboardingStep active step="1" label="STEP 1" title="기본 정보" />
+            <OnboardingStep step="2" label="STEP 2" title="관심 분야 및 매칭" />
+            <OnboardingStep step="3" label="STEP 3" title="포트폴리오 등록" />
           </div>
 
-          <form className="signup-form" onSubmit={handleSignup}>
-            <label>
-              학교 메일
-              <input name="email" defaultValue="student@snu.ac.kr" type="email" required />
-            </label>
-            <label>
-              이름
-              <input name="name" defaultValue="김하늘" required />
-            </label>
-            <label>
-              희망 직군
-              <select name="role" defaultValue="백엔드 개발자" required>
-                <option>백엔드 개발자</option>
-                <option>AI 엔지니어</option>
-                <option>프론트엔드 개발자</option>
-                <option>데이터 분석가</option>
-              </select>
-            </label>
-            <label>
-              원하는 분야
-              <input name="interest" defaultValue="AI 서비스와 백엔드 아키텍처" required />
-            </label>
-            <label>
-              만나고 싶은 사람
-              <input
-                name="wantsToMeet"
-                defaultValue="해커톤과 인턴 준비를 같이 할 컴공 계열 학생"
-                required
+          <div className="onboarding-heading">
+            <h2>회원가입 온보딩</h2>
+            <p>더 정확한 매칭을 위해 정보를 입력해주세요. 모든 정보는 언제든지 수정할 수 있어요.</p>
+          </div>
+
+          <form className="onboarding-card" id="onboarding-form" onSubmit={handleSignup}>
+            <section className="onboarding-section basic-section">
+              <SectionNumber number="1" />
+              <div className="section-copy">
+                <h3>기본 정보</h3>
+                <p>나를 소개하고 기본 정보를 입력해주세요.</p>
+              </div>
+              <label className="intro-field">
+                <span>
+                  자기소개 <small>100자 이내</small>
+                </span>
+                <textarea
+                  maxLength={100}
+                  name="intro"
+                  onChange={(event) => setIntroLength(event.target.value.length)}
+                  defaultValue="서비스를 실제로 만들어보며 성장하는 것을 좋아합니다."
+                  required
+                />
+                <b>{introLength} / 100</b>
+              </label>
+              <label className="role-field">
+                <span>
+                  직군 <em>*</em>
+                </span>
+                <select name="role" defaultValue="백엔드 개발자" required>
+                  <option>백엔드 개발자</option>
+                  <option>AI 엔지니어</option>
+                  <option>프론트엔드 개발자</option>
+                  <option>데이터 분석가</option>
+                </select>
+                <ChevronDown className="select-icon" size={20} />
+              </label>
+            </section>
+
+            <section className="onboarding-section match-section">
+              <SectionNumber number="2" />
+              <div className="section-copy">
+                <h3>관심 분야 및 매칭</h3>
+                <p>관심 있는 분야와 만나고 싶은 사람을 선택해주세요.</p>
+              </div>
+              <ChipGroup
+                label="원하는 분야"
+                selected={interestChips}
+                onToggle={(chip) => toggleChip("interest", chip)}
               />
-            </label>
-            <label className="wide-field">
-              소개
-              <textarea
-                name="intro"
-                defaultValue="서비스를 실제로 만들어보며 성장하는 것을 좋아합니다. 비슷한 목표를 가진 학생들과 정보를 나누고 싶어요."
-                required
+              <ChipGroup
+                label="만나고 싶은 사람"
+                selected={meetChips}
+                onToggle={(chip) => toggleChip("meet", chip)}
               />
-            </label>
-            <label className="wide-field optional-field">
-              포트폴리오
-              <input name="portfolio" defaultValue="github.com/demo/student" />
-            </label>
-            <button className="primary-cta" type="submit">
-              <Mail size={22} />
-              인증 완료하고 메인으로
-            </button>
+            </section>
+
+            <section className="onboarding-section portfolio-section">
+              <SectionNumber number="3" />
+              <div className="section-copy">
+                <h3>포트폴리오 등록 <span>(선택)</span></h3>
+                <p>포트폴리오를 등록하면 더 좋은 기회를 만날 수 있어요.</p>
+                <div className="match-boost">
+                  <SparkIcon />
+                  포트폴리오 등록 시 매칭률 <strong>+40%</strong>
+                </div>
+              </div>
+              <button className="upload-zone" type="button">
+                <UploadCloud size={42} />
+                <strong>파일을 드래그하거나 클릭하여 업로드</strong>
+                <span>PDF, PPT, DOC, ZIP 파일 지원 (최대 20MB)</span>
+              </button>
+            </section>
           </form>
+
+          <button className="onboarding-submit" form="onboarding-form" type="submit">
+            다음 단계
+            <ArrowRight size={20} />
+          </button>
+          <p className="onboarding-note">입력한 내용은 언제든지 수정할 수 있습니다.</p>
         </section>
       )}
 
       {step === "dashboard" && (
-        <section className="dashboard-shell">
-          <div className="dashboard-heading">
-            <div>
-              <p className="eyebrow">내 컴공 계열 포지션</p>
-              <h2>{profileName}님의 비교 대시보드</h2>
-            </div>
-            <button className="price-button">
-              심화 리포트 데모 결제 4,900원
-              <LockKeyhole size={18} />
-            </button>
-          </div>
-
-          <div className="dashboard-grid">
-            <section className="position-panel">
-              <div className="section-title">
-                <TrendingUp size={22} />
-                <h3>현재 위치 그래프</h3>
-              </div>
-              <div className="percentile">
-                <strong>상위 {100 - activeInsight.dashboard.percentile}% 근접</strong>
-                <span>{activeInsight.dashboard.percentile} percentile</span>
-              </div>
-              <div className="progress-track">
-                <div style={{ width: progressWidth }} />
-              </div>
-              <p>
-                같은 계열 평균은 공모전 {activeInsight.dashboard.averageContestCount}회,
-                현재 입력 기준은 {activeInsight.dashboard.myContestCount}회로 보여요.
-                다음 추천 행동은 해커톤 MVP 1개 완성입니다.
-              </p>
-            </section>
-
-            <section className="position-panel compact-panel">
-              <div className="section-title">
-                <CheckCircle2 size={22} />
-                <h3>프로필 완성도</h3>
-              </div>
-              <strong>{activeInsight.dashboard.profileCompletion}%</strong>
-              <p>포트폴리오와 활동 경험을 추가하면 추천 정확도가 올라갑니다.</p>
-            </section>
-          </div>
-
-          <section className="peer-section">
-            <div className="section-title">
-              <Users size={22} />
-              <h3>나와 비슷한 계열의 학생</h3>
-            </div>
-            <div className="peer-grid">
-              {activeInsight.peers.map((peer) => (
-                <article className="peer-card" key={peer.id}>
-                  <span className="hidden-school">{peer.schoolHidden}</span>
-                  <h4>{peer.name}</h4>
-                  <p>{peer.intro}</p>
-                  <div className="tag-row">
-                    {peer.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                  <div className="peer-actions">
-                    <button>
-                      <MessageSquareText size={17} />
-                      편지 보내기
-                    </button>
-                    <button>상세 보기</button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        </section>
+        <AppDashboard
+          insight={activeInsight}
+          profileName={profileName}
+        />
       )}
     </main>
   );
@@ -645,56 +739,290 @@ function Header({ active, onHome }: { active: Step; onHome: () => void }) {
   );
 }
 
+function AppDashboard({
+  insight,
+  profileName,
+}: {
+  insight: Insight;
+  profileName: string;
+}) {
+  const peers = [...insight.peers, ...dashboardExtraPeers].slice(0, 5);
+
+  return (
+    <div className="app-dashboard">
+      <aside className="app-sidebar">
+        <div className="app-sidebar-brand">
+          <span className="logo-mark">
+            <i />
+            <i />
+            <i />
+          </span>
+          <strong>
+            Career<span>Scope</span>
+          </strong>
+        </div>
+
+        <nav className="app-nav" aria-label="메인 대시보드 메뉴">
+          {dashboardNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button className={item.active ? "active" : ""} key={item.label}>
+                <Icon size={24} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="premium-card">
+          <div className="premium-icon">
+            <Gem size={24} />
+          </div>
+          <strong>프리미엄 멤버십</strong>
+          <p>더 많은 분석과 인사이트를 경험해보세요.</p>
+          <button>
+            업그레이드하기
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </aside>
+
+      <section className="app-main">
+        <div className="app-topbar">
+          <div>
+            <h1>같은 계열 내 내 위치</h1>
+            <p>나와 비슷한 사용자 그룹 내 상대적 위치를 확인해보세요.</p>
+          </div>
+          <div className="app-user-tools">
+            <button aria-label="알림">
+              <Bell size={23} />
+              <span />
+            </button>
+            <div className="app-profile">
+              <div className="avatar">김</div>
+              <strong>{profileName}</strong>
+              <ChevronDown size={18} />
+            </div>
+          </div>
+        </div>
+
+        <section className="distribution-card">
+          <div className="distribution-meta">
+            <Info size={18} />
+            <span>기준: 컴퓨터공학 계열 · 2,345명</span>
+          </div>
+          <div className="curve-graph" aria-label="상위 72% 위치 분포 그래프">
+            <svg viewBox="0 0 980 210" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="curveFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#2f3cf4" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#2f3cf4" stopOpacity="0.02" />
+                </linearGradient>
+              </defs>
+              <path
+                className="curve-area"
+                d="M30 170 C160 168 240 156 330 126 C445 88 535 42 675 72 C770 94 830 142 950 164 L950 176 L30 176 Z"
+              />
+              <path
+                className="curve-line"
+                d="M30 170 C160 168 240 156 330 126 C445 88 535 42 675 72 C770 94 830 142 950 164"
+              />
+              {[180, 485, 670, 820].map((x) => (
+                <line className="curve-guide" key={x} x1={x} x2={x} y1="60" y2="176" />
+              ))}
+            </svg>
+            <div className="position-marker">
+              <span>내 위치</span>
+              <b />
+              <strong>상위 72%</strong>
+              <small>보다 우수한 성과예요!</small>
+            </div>
+            <div className="curve-axis">
+              {["0% 하위", "10%", "25%", "50% 평균", "75%", "90%", "100% 상위"].map(
+                (label) => (
+                  <span key={label}>{label}</span>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="stat-grid">
+          {dashboardStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <article className="stat-card" key={stat.label}>
+                <div className="stat-card-icon">
+                  <Icon size={24} />
+                </div>
+                <div>
+                  <h3>{stat.label}</h3>
+                  <strong>{stat.value}</strong>
+                </div>
+                <footer>
+                  <span>{stat.rank}</span>
+                  <small className={stat.deltaTone}>{stat.delta}</small>
+                </footer>
+              </article>
+            );
+          })}
+        </div>
+
+        <section className="similar-users">
+          <div className="section-heading-row">
+            <h2>나와 비슷한 사용자</h2>
+            <button>
+              더보기
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <div className="similar-user-grid">
+            {peers.map((peer) => (
+              <article className="similar-user-card" key={peer.id}>
+                <div className="peer-avatar">{peer.name.slice(0, 1)}</div>
+                <h3>{peer.name}</h3>
+                <p>{peer.schoolHidden}</p>
+                <div className="peer-chip-row">
+                  {peer.tags.slice(0, 3).map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+                <footer>
+                  <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
+                  <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
+                </footer>
+                <button className="letter-button">
+                  <MessageSquareText size={16} />
+                  편지 보내기
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      </section>
+    </div>
+  );
+}
+
+const dashboardNavItems = [
+  { label: "홈", icon: HomeIcon, active: true },
+  { label: "분석 리포트", icon: BarChart3 },
+  { label: "비교 보기", icon: Scale },
+  { label: "커리큘럼", icon: BookOpen },
+  { label: "네트워킹", icon: Users },
+  { label: "프로필", icon: User },
+  { label: "설정", icon: Settings },
+];
+
+const dashboardStats = [
+  {
+    label: "공모전 참가 횟수 / 상위 퍼센트",
+    value: "8회",
+    rank: "상위 68%",
+    delta: "▲ 12%",
+    deltaTone: "positive",
+    icon: Trophy,
+  },
+  {
+    label: "어학성적",
+    value: "TOEIC 920",
+    rank: "상위 63%",
+    delta: "▲ 7%",
+    deltaTone: "positive",
+    icon: Globe2,
+  },
+  {
+    label: "프로젝트 수",
+    value: "5개",
+    rank: "상위 71%",
+    delta: "▲ 9%",
+    deltaTone: "positive",
+    icon: Code2,
+  },
+  {
+    label: "자격증 수",
+    value: "3개",
+    rank: "상위 54%",
+    delta: "— 0%",
+    deltaTone: "neutral",
+    icon: CheckCircle2,
+  },
+];
+
+const dashboardExtraPeers: Insight["peers"] = [
+  {
+    id: "peer-extra-1",
+    name: "알고리즘형 동료",
+    schoolHidden: "한양대 컴퓨터공학과",
+    intro: "알고리즘과 시스템 설계에 관심이 많아요.",
+    portfolio: "demo",
+    tags: ["알고리즘", "시스템", "보안"],
+  },
+  {
+    id: "peer-extra-2",
+    name: "데이터 분석형 동료",
+    schoolHidden: "고려대 컴퓨터학과",
+    intro: "데이터 분석과 Python 프로젝트를 준비 중이에요.",
+    portfolio: "demo",
+    tags: ["AI/ML", "데이터분석", "Python"],
+  },
+  {
+    id: "peer-extra-3",
+    name: "서비스 기획형 동료",
+    schoolHidden: "성균관대 소프트웨어학과",
+    intro: "모바일 서비스와 백엔드 협업을 좋아해요.",
+    portfolio: "demo",
+    tags: ["모바일", "백엔드", "Firebase"],
+  },
+];
+
 const reportMetrics = [
   {
     label: "전공심화",
     score: 78,
     icon: GraduationCap,
     position: "top",
-    point: [160, 54],
   },
   {
     label: "취업률",
     score: 72,
     icon: Briefcase,
     position: "right-top",
-    point: [236, 116],
   },
   {
     label: "공모전",
     score: 64,
     icon: Trophy,
     position: "right-bottom",
-    point: [221, 226],
   },
   {
     label: "어학",
     score: 68,
     icon: Globe2,
     position: "left-bottom",
-    point: [103, 232],
   },
   {
     label: "프로젝트",
     score: 81,
     icon: Code2,
     position: "left-top",
-    point: [79, 112],
   },
 ];
 
 function buildRadarPoints(scores: number[]) {
+  return scores
+    .map((score, index) => getRadarPoint(score, index).join(","))
+    .join(" ");
+}
+
+function getRadarPoint(score: number, index: number) {
   const center = 160;
   const radius = 132;
-  return scores
-    .map((score, index) => {
-      const angle = -Math.PI / 2 + (index * Math.PI * 2) / scores.length;
-      const scaled = (score / 100) * radius;
-      const x = center + Math.cos(angle) * scaled;
-      const y = center + Math.sin(angle) * scaled;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const angle = -Math.PI / 2 + (index * Math.PI * 2) / reportMetrics.length;
+  const scaled = (score / 100) * radius;
+  const x = center + Math.cos(angle) * scaled;
+  const y = center + Math.sin(angle) * scaled;
+  return [Number(x.toFixed(1)), Number(y.toFixed(1))];
 }
 
 function ReportMeta({
@@ -784,5 +1112,72 @@ function FieldShell({
       </span>
       <span className="field-control">{children}</span>
     </label>
+  );
+}
+
+function OnboardingStep({
+  active = false,
+  step,
+  label,
+  title,
+}: {
+  active?: boolean;
+  step: string;
+  label: string;
+  title: string;
+}) {
+  return (
+    <div className={`onboarding-step ${active ? "active" : ""}`}>
+      <span>{step}</span>
+      <small>{label}</small>
+      <strong>{title}</strong>
+    </div>
+  );
+}
+
+function SectionNumber({ number }: { number: string }) {
+  return <span className="section-number">{number}</span>;
+}
+
+function ChipGroup({
+  label,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  selected: string[];
+  onToggle: (chip: string) => void;
+}) {
+  return (
+    <fieldset className="chip-group">
+      <legend>
+        {label} <small>(복수 선택)</small>
+      </legend>
+      <div>
+        {fieldChips.map((chip) => {
+          const isSelected = selected.includes(chip);
+          return (
+            <button
+              aria-pressed={isSelected}
+              className={isSelected ? "selected" : ""}
+              key={`${label}-${chip}`}
+              onClick={() => onToggle(chip)}
+              type="button"
+            >
+              {isSelected ? "✓ " : ""}
+              {chip}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <span className="spark-icon" aria-hidden="true">
+      ✦
+    </span>
   );
 }
