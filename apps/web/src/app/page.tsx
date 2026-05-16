@@ -1203,11 +1203,6 @@ export default function Home() {
       });
     } catch {
       setServerStatus("unavailable");
-      setIntentRecords((records) => {
-        const next = [fallbackRecord, ...records];
-        saveIntentRecords(next);
-        return next;
-      });
     }
   }
 

@@ -135,3 +135,4 @@ npm run data:collect:inha --workspace @career-scope/api # ADIGA 인하대 학과
 - private pilot 직전에는 `docs/pilot-release-checklist.md`와 `/api/pilot-readiness`를 함께 확인합니다.
 - Postgres를 연결하면 가입 프로필과 참여 의사는 Prisma 모델로 저장됩니다.
 - 프론트엔드는 API가 꺼져 있어도 기본 리포트 fallback은 보여주지만, 서버 저장이 필요한 프로필/참여 의사 액션은 API 연결이 필요합니다.
+- 대시보드의 관심 추천 목록은 서버 저장이 성공한 참여 의사만 localStorage에 캐시합니다. API 실패 시 KPI로 착각할 수 있는 로컬-only 참여 의사는 만들지 않습니다.

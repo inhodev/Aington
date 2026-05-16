@@ -21,6 +21,8 @@ Use this before showing Aington to a private student cohort.
 - Peer or meeting interest creates a server-side intent.
 - Dashboard shows saved interests and MVP validation status.
 - Report source trust shows the actual tier: ADIGA public curriculum, Inha current-term sugang signal, database, or needs-review seed.
+- If the API is unavailable, report/signup/dashboard surfaces show the server-unavailable warning instead of silently implying saved actions.
+- Interest records shown in the dashboard must be server-confirmed; API failure must not create local-only KPI records.
 
 ## Data Gates
 
