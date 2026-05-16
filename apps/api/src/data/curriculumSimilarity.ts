@@ -142,10 +142,6 @@ export async function buildCurriculumSimilarityFromDatabase(
       },
     });
 
-    if (dbCourses.length === 0) {
-      return buildCurriculumSimilarity(options);
-    }
-
     const courses = dbCourses.map((course) => ({
       university: course.department.university.name,
       department: course.department.name,
@@ -170,12 +166,62 @@ export async function buildCurriculumSimilarityFromDatabase(
       evidenceFile: course.evidenceFile,
     }));
 
+    if (courses.length === 0) {
+      return buildCurriculumSimilarity(options);
+    }
+
+    const fallbackCourses = loadCurriculumCourses();
+    if (shouldPreferFallbackCoursesForTarget(courses, fallbackCourses, options)) {
+      return buildCurriculumSimilarityFromCourses(fallbackCourses, options);
+    }
+
     return buildCurriculumSimilarityFromCourses(courses, options);
   } catch (error) {
     console.warn("Curriculum DB lookup failed. Falling back to CSV data.");
     console.warn(error);
     return buildCurriculumSimilarity(options);
   }
+}
+
+function shouldPreferFallbackCoursesForTarget(
+  dbCourses: Course[],
+  fallbackCourses: Course[],
+  options: CurriculumSimilarityOptions,
+) {
+  if (!options.department) {
+    return false;
+  }
+
+  const school = normalizeSchoolName(options.school || "");
+  const department = normalizeTargetName(options.department);
+  const fallbackTargetCourses = fallbackCourses.filter(
+    (course) =>
+      normalizeSchoolName(course.university) === school &&
+      normalizeTargetName(course.department) === department,
+  );
+
+  if (fallbackTargetCourses.length === 0) {
+    return false;
+  }
+
+  const dbTargetCourses = dbCourses.filter(
+    (course) =>
+      normalizeSchoolName(course.university) === school &&
+      normalizeTargetName(course.department) === department,
+  );
+  const fallbackSourceBackedCount = fallbackTargetCourses.filter(
+    (course) => course.sourceUrl,
+  ).length;
+
+  if (dbTargetCourses.length === 0) {
+    return true;
+  }
+
+  if (fallbackSourceBackedCount > 0 && dbTargetCourses.every((course) => !course.sourceUrl)) {
+    return true;
+  }
+
+  return fallbackSourceBackedCount >= 10 && dbTargetCourses.length < fallbackSourceBackedCount / 2;
 }
 
 export function buildCurriculumSimilarityFromCourses(
@@ -556,6 +602,10 @@ function tokenize(text: string) {
 function normalizeSchoolName(school: string) {
   const normalized = normalizeSpaces(school);
   return SCHOOL_ALIASES[normalized] || normalized;
+}
+
+function normalizeTargetName(value: string) {
+  return normalizeSpaces(value).replace(/\s+/g, "");
 }
 
 function targetKey(school: string, department: string) {

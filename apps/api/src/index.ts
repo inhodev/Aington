@@ -103,6 +103,7 @@ const port = Number(process.env.PORT || 4000);
 const memoryProfiles: StoredProfile[] = [];
 const memoryMeetingIntents: StoredMeetingIntent[] = [];
 const memoryEventLogs: StoredEventLog[] = [];
+let runtimeSchemaReady: Promise<boolean> | null = null;
 
 const configuredWebOrigins = [
   process.env.WEB_ORIGIN,
@@ -188,6 +189,71 @@ function toPublicProfile<T extends { profileTokenHash?: string | null }>(profile
   return publicProfile;
 }
 
+async function ensurePrismaRuntimeSchema() {
+  if (!prisma) {
+    return false;
+  }
+
+  runtimeSchemaReady ??= (async () => {
+    try {
+      await prisma.$executeRawUnsafe(
+        'ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "selectedField" TEXT',
+      );
+      await prisma.$executeRawUnsafe(
+        'ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "matchingDistance" TEXT',
+      );
+      await prisma.$executeRawUnsafe(
+        'ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "portfolioStats" TEXT',
+      );
+      await prisma.$executeRawUnsafe(
+        'ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "profileTokenHash" TEXT',
+      );
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "EventLog" (
+        "id" TEXT NOT NULL,
+        "profileId" TEXT,
+        "eventName" TEXT NOT NULL,
+        "source" TEXT,
+        "metadata" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "EventLog_pkey" PRIMARY KEY ("id")
+      )`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "MeetingIntent" (
+        "id" TEXT NOT NULL,
+        "profileId" TEXT NOT NULL,
+        "targetType" TEXT NOT NULL,
+        "targetId" TEXT NOT NULL,
+        "source" TEXT NOT NULL,
+        "reason" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "MeetingIntent_pkey" PRIMARY KEY ("id")
+      )`);
+      await prisma.$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "EventLog_profileId_idx" ON "EventLog"("profileId")',
+      );
+      await prisma.$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "EventLog_eventName_idx" ON "EventLog"("eventName")',
+      );
+      await prisma.$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "EventLog_createdAt_idx" ON "EventLog"("createdAt")',
+      );
+      await prisma.$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "MeetingIntent_profileId_idx" ON "MeetingIntent"("profileId")',
+      );
+      await prisma.$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "MeetingIntent_targetType_targetId_idx" ON "MeetingIntent"("targetType", "targetId")',
+      );
+      return true;
+    } catch (error) {
+      runtimeSchemaReady = null;
+      console.warn("Runtime Prisma schema check failed.");
+      console.warn(error);
+      return false;
+    }
+  })();
+
+  return runtimeSchemaReady;
+}
+
 async function resolveCurriculumSource(): Promise<"database" | "seed"> {
   if (!prisma) {
     return "seed";
@@ -201,15 +267,40 @@ async function resolveCurriculumSource(): Promise<"database" | "seed"> {
   }
 }
 
+async function resolveInsightCurriculumSource({
+  department,
+  school,
+}: {
+  department: string;
+  school: string;
+}): Promise<"database" | "csv" | "seed"> {
+  const globalSource = prisma ? await resolveCurriculumSource() : getCurriculumFallbackSource();
+  if (globalSource !== "database") {
+    return globalSource;
+  }
+
+  return findInhaDepartmentTarget(school, department) ? "seed" : "database";
+}
+
 async function verifyProfileToken(profileId: string, profileToken: string) {
   const tokenHash = hashProfileToken(profileToken);
 
   if (prisma) {
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
-      select: { id: true, profileTokenHash: true },
-    });
-    return Boolean(profile?.profileTokenHash && profile.profileTokenHash === tokenHash);
+    if (!(await ensurePrismaRuntimeSchema())) {
+      return false;
+    }
+
+    try {
+      const profile = await prisma.profile.findUnique({
+        where: { id: profileId },
+        select: { id: true, profileTokenHash: true },
+      });
+      return Boolean(profile?.profileTokenHash && profile.profileTokenHash === tokenHash);
+    } catch (error) {
+      console.warn("Profile token lookup failed.");
+      console.warn(error);
+      return false;
+    }
   }
 
   const profile = memoryProfiles.find((item) => item.id === profileId);
@@ -234,8 +325,13 @@ async function createEventLog({
     metadata: metadata || "",
   };
 
-  if (prisma) {
-    return prisma.eventLog.create({ data: payload });
+  if (prisma && (await ensurePrismaRuntimeSchema())) {
+    try {
+      return await prisma.eventLog.create({ data: payload });
+    } catch (error) {
+      console.warn("Event log write failed. Falling back to memory event log.");
+      console.warn(error);
+    }
   }
 
   const saved: StoredEventLog = {
@@ -257,16 +353,23 @@ async function countEventsByName() {
   ];
 
   if (prisma) {
-    const grouped = await prisma.eventLog.groupBy({
-      by: ["eventName"],
-      _count: { eventName: true },
-    });
-    return Object.fromEntries(
-      eventNames.map((eventName) => [
-        eventName,
-        grouped.find((item) => item.eventName === eventName)?._count.eventName ?? 0,
-      ]),
-    ) as Record<EventName, number>;
+    if (await ensurePrismaRuntimeSchema()) {
+      try {
+        const grouped = await prisma.eventLog.groupBy({
+          by: ["eventName"],
+          _count: { eventName: true },
+        });
+        return Object.fromEntries(
+          eventNames.map((eventName) => [
+            eventName,
+            grouped.find((item) => item.eventName === eventName)?._count.eventName ?? 0,
+          ]),
+        ) as Record<EventName, number>;
+      } catch (error) {
+        console.warn("Event log count failed. Falling back to memory event counts.");
+        console.warn(error);
+      }
+    }
   }
 
   return Object.fromEntries(
@@ -279,15 +382,22 @@ async function countEventsByName() {
 
 async function countMeetingIntentTargets(targetType: StoredMeetingIntent["targetType"]) {
   if (prisma) {
-    const grouped = await prisma.meetingIntent.groupBy({
-      by: ["targetId"],
-      where: { targetType },
-      _count: { targetId: true },
-    });
+    if (await ensurePrismaRuntimeSchema()) {
+      try {
+        const grouped = await prisma.meetingIntent.groupBy({
+          by: ["targetId"],
+          where: { targetType },
+          _count: { targetId: true },
+        });
 
-    return Object.fromEntries(
-      grouped.map((item) => [item.targetId, item._count.targetId]),
-    ) as Record<string, number>;
+        return Object.fromEntries(
+          grouped.map((item) => [item.targetId, item._count.targetId]),
+        ) as Record<string, number>;
+      } catch (error) {
+        console.warn("Meeting intent count failed. Falling back to memory intents.");
+        console.warn(error);
+      }
+    }
   }
 
   return memoryMeetingIntents.reduce<Record<string, number>>((counts, intent) => {
@@ -302,23 +412,30 @@ async function countMeetingIntentTargets(targetType: StoredMeetingIntent["target
 
 async function buildMeetingIntentSummary() {
   if (prisma) {
-    const grouped = await prisma.meetingIntent.groupBy({
-      by: ["targetType", "targetId"],
-      _count: { id: true },
-      _max: { createdAt: true },
-    });
+    if (await ensurePrismaRuntimeSchema()) {
+      try {
+        const grouped = await prisma.meetingIntent.groupBy({
+          by: ["targetType", "targetId"],
+          _count: { id: true },
+          _max: { createdAt: true },
+        });
 
-    const targets = grouped.map((item) => ({
-      targetType: item.targetType,
-      targetId: item.targetId,
-      count: item._count.id,
-      latestAt: item._max.createdAt?.toISOString() ?? "",
-    }));
+        const targets = grouped.map((item) => ({
+          targetType: item.targetType,
+          targetId: item.targetId,
+          count: item._count.id,
+          latestAt: item._max.createdAt?.toISOString() ?? "",
+        }));
 
-    return {
-      totalIntents: targets.reduce((total, item) => total + item.count, 0),
-      targets: targets.sort((a, b) => b.count - a.count),
-    };
+        return {
+          totalIntents: targets.reduce((total, item) => total + item.count, 0),
+          targets: targets.sort((a, b) => b.count - a.count),
+        };
+      } catch (error) {
+        console.warn("Meeting intent summary failed. Falling back to memory intents.");
+        console.warn(error);
+      }
+    }
   }
 
   const targets = memoryMeetingIntents.reduce<
@@ -690,7 +807,7 @@ app.get("/api/insights", async (req, res) => {
     },
   };
   const topComparison = curriculumSimilarity.rankings[0];
-  const curriculumSource = prisma ? await resolveCurriculumSource() : getCurriculumFallbackSource();
+  const curriculumSource = await resolveInsightCurriculumSource({ school, department });
 
   res.json({
     ...insight,
@@ -852,6 +969,10 @@ app.post("/api/signup", async (req, res) => {
   };
 
   if (prisma) {
+    if (!(await ensurePrismaRuntimeSchema())) {
+      return res.status(503).json({ error: "Profile storage is temporarily unavailable" });
+    }
+
     const saved = await prisma.profile.create({ data: payload });
     await createEventLog({
       eventName: "signup_completed",
@@ -924,6 +1045,10 @@ app.post("/api/meeting-intents", async (req, res) => {
   };
 
   if (prisma) {
+    if (!(await ensurePrismaRuntimeSchema())) {
+      return res.status(503).json({ error: "Intent storage is temporarily unavailable" });
+    }
+
     const saved = await prisma.meetingIntent.create({ data: payload });
     await createEventLog({
       eventName: "intent_created",
