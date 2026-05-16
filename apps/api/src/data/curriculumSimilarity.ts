@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { curriculumSeedCourses } from "./curriculumSeed.js";
 import { prisma } from "../lib/prisma.js";
 
 type CurriculumRow = {
@@ -115,6 +116,7 @@ const areaRules: Array<{ area: string; keywords: string[] }> = [
 ];
 
 let cachedCourses: Course[] | null = null;
+let cachedCurriculumSource: "csv" | "seed" | null = null;
 
 export function buildCurriculumSimilarity(
   options: CurriculumSimilarityOptions = {},
@@ -236,8 +238,19 @@ export function loadCurriculumCourses() {
   }
 
   const csvPath = findCsvPath();
+  if (!csvPath) {
+    cachedCurriculumSource = "seed";
+    cachedCourses = curriculumSeedCourses.map((course) => ({
+      ...course,
+      canonicalTitle: canonicalizeCourseName(course.title),
+      area: course.area || classifyArea(course.text),
+    }));
+    return cachedCourses;
+  }
+
   const csv = fs.readFileSync(csvPath, "utf8").replace(/^\uFEFF/, "");
   const rows = parseCsv(csv);
+  cachedCurriculumSource = "csv";
   cachedCourses = rows
     .filter((row) => row.record_type === "course" && row.course_or_item.trim())
     .map((row) => {
@@ -265,6 +278,10 @@ export function loadCurriculumCourses() {
   return cachedCourses;
 }
 
+export function getCurriculumFallbackSource() {
+  return cachedCurriculumSource ?? (findCsvPath() ? "csv" : "seed");
+}
+
 function findCsvPath() {
   const candidates = [
     path.resolve(process.cwd(), CSV_RELATIVE_PATH),
@@ -273,10 +290,7 @@ function findCsvPath() {
     path.resolve(process.cwd(), "..", "..", "..", CSV_RELATIVE_PATH),
   ];
   const found = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!found) {
-    throw new Error(`Curriculum CSV not found. Tried: ${candidates.join(", ")}`);
-  }
-  return found;
+  return found ?? null;
 }
 
 function parseCsv(csv: string): CurriculumRow[] {
@@ -366,7 +380,8 @@ function resolveBaseKey(courses: Course[], options: CurriculumSimilarityOptions)
     return targetKey(schoolOnly.school, schoolOnly.department);
   }
 
-  return targetKey(targets[0].school, targets[0].department);
+  const fallback = targets[0] ?? { school: "경기대", department: "컴퓨터공학과" };
+  return targetKey(fallback.school, fallback.department);
 }
 
 function buildAvailableTargets(courses: Course[]) {

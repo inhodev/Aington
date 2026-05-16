@@ -20,6 +20,8 @@ export type ComplementMatchPeer = ComplementPeerInput & {
   matchReasons: string[];
   complementTags: string[];
   activityGaps: PortfolioCategory[];
+  observedIntentCount: number;
+  networkSignalReason?: string;
   matchMode: "complement";
 };
 
@@ -38,11 +40,13 @@ export function buildComplementMatches({
   weaknessAreas,
   portfolioStats,
   matchingDistance,
+  intentSignals = {},
 }: {
   peers: ComplementPeerInput[];
   weaknessAreas: string[];
   portfolioStats: PortfolioStats;
   matchingDistance: MatchingDistance;
+  intentSignals?: Record<string, number>;
 }) {
   const normalizedWeaknesses = unique(
     weaknessAreas.flatMap((area) => normalizeAreaSignals(area)),
@@ -56,6 +60,7 @@ export function buildComplementMatches({
         normalizedWeaknesses,
         activityGaps,
         matchingDistance,
+        observedIntentCount: intentSignals[peer.id] ?? 0,
       }),
     )
     .sort((a, b) => b.matchScore - a.matchScore);
@@ -66,11 +71,13 @@ function scorePeer({
   normalizedWeaknesses,
   activityGaps,
   matchingDistance,
+  observedIntentCount,
 }: {
   peer: ComplementPeerInput;
   normalizedWeaknesses: string[];
   activityGaps: PortfolioCategory[];
   matchingDistance: MatchingDistance;
+  observedIntentCount: number;
 }): ComplementMatchPeer {
   const peerSignals = unique([...peer.strengthTags, ...peer.focusAreas, ...peer.tags]);
   const complementTags = normalizedWeaknesses.filter((weakness) =>
@@ -82,14 +89,26 @@ function scorePeer({
       : Math.round((complementTags.length / normalizedWeaknesses.length) * 55);
   const activityScore = scoreActivityGaps(peer.activityStats, activityGaps);
   const preferenceScore = scorePreference(peerSignals, matchingDistance);
-  const matchScore = clampScore(capabilityScore + activityScore + preferenceScore);
+  const intentScore = scoreIntentSignal(observedIntentCount);
+  const matchScore = clampScore(capabilityScore + activityScore + preferenceScore + intentScore);
+  const networkSignalReason =
+    observedIntentCount > 0
+      ? `실제 학생 관심 ${observedIntentCount}회가 쌓인 추천이에요.`
+      : undefined;
 
   return {
     ...peer,
     matchScore,
-    matchReasons: buildMatchReasons(complementTags, activityGaps, peer.activityStats),
+    matchReasons: buildMatchReasons(
+      complementTags,
+      activityGaps,
+      peer.activityStats,
+      networkSignalReason,
+    ),
     complementTags: complementTags.slice(0, 4),
     activityGaps,
+    observedIntentCount,
+    networkSignalReason,
     matchMode: "complement",
   };
 }
@@ -120,10 +139,19 @@ function scorePreference(peerSignals: string[], matchingDistance: MatchingDistan
   return Math.min(15, 6 + hits * 3);
 }
 
+function scoreIntentSignal(intentCount: number) {
+  if (intentCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(8, Math.round(Math.log2(intentCount + 1) * 4));
+}
+
 function buildMatchReasons(
   complementTags: string[],
   activityGaps: PortfolioCategory[],
   peerStats: PortfolioStats,
+  networkSignalReason?: string,
 ) {
   const reasons: string[] = [];
   if (complementTags.length > 0) {
@@ -133,6 +161,10 @@ function buildMatchReasons(
   const coveredGap = activityGaps.find((gap) => (peerStats[gap] ?? 0) > 0);
   if (coveredGap) {
     reasons.push(`내 부족 활동인 ${coveredGap} 경험을 보완할 수 있어요.`);
+  }
+
+  if (networkSignalReason) {
+    reasons.push(networkSignalReason);
   }
 
   if (reasons.length === 0) {

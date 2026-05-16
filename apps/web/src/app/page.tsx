@@ -47,6 +47,26 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { dummyMeetings } from "@/data/dummyMeetings";
+import { DashboardView } from "./components/DashboardView";
+import { LandingView } from "./components/LandingView";
+import { NetworkingIntentSummary, type IntentRecord } from "./components/NetworkingIntentSummary";
+import { ReportView } from "./components/ReportView";
+import { SignupView } from "./components/SignupView";
+
+type CurriculumTrustConfidence = "high" | "medium" | "needs-review" | (string & {});
+
+type CurriculumTrustSnapshot = {
+  sourceKind: string;
+  label: string;
+  description: string;
+  sourceUrl: string | null;
+  evidenceFile: string | null;
+  sourceCourseSignalCount: number;
+  confidence: CurriculumTrustConfidence;
+};
+
+type ServerStatus = "unknown" | "available" | "unavailable";
 
 type Insight = {
   target: {
@@ -140,8 +160,12 @@ type Insight = {
     matchReasons?: string[];
     complementTags?: string[];
     activityGaps?: PortfolioCategory[];
+    observedIntentCount?: number;
+    networkSignalReason?: string;
     matchMode?: "complement";
   }>;
+  curriculumSource?: "database" | "seed" | string;
+  curriculumTrust?: CurriculumTrustSnapshot;
 };
 
 type DeepReport = {
@@ -183,6 +207,42 @@ type DeepReport = {
 
 type DeepReportStatus = "idle" | "loading" | "ready" | "error";
 
+type FunnelEventName =
+  | "report_viewed"
+  | "signup_completed"
+  | "recommendation_clicked"
+  | "intent_created";
+
+type ValidationStatus = {
+  storage: string;
+  curriculumSource: "database" | "seed" | string;
+  readiness: "ready-to-interpret" | "collecting-signal" | "needs-traffic" | string;
+  funnel: {
+    counts: Record<FunnelEventName, number>;
+    rates: {
+      signupFromReport: number;
+      recommendationClickFromReport: number;
+      intentFromReport: number;
+    };
+  };
+  dataCoverage: {
+    officialSourceCount: number;
+    inhaDepartmentCount?: number;
+    inhaPublicCurriculumDepartmentCount?: number;
+    inhaPublicCourseBackedDepartmentCount?: number;
+    inhaMatchedAdmissionDepartmentCount?: number;
+    inhaOfficialSugangMatchedAdmissionDepartmentCount?: number;
+    inhaOfficialSugangCourseBackedAdmissionDepartmentCount?: number;
+    inhaOfficialSugangPartialAdmissionDepartmentCount?: number;
+    inhaSourceBackedAdmissionDepartmentCount?: number;
+    inhaArchetypeOnlyDepartmentCount?: number;
+    seedDepartmentCount: number;
+    sourceBackedDepartmentCount: number;
+    sourceBackedCourseCount: number;
+  };
+  qaWarnings: string[];
+};
+
 type Step =
   | "landing"
   | "analyzing"
@@ -207,6 +267,18 @@ type ChatMessage = {
   text: string;
   time: string;
 };
+type AuthSession = {
+  profileId: string;
+  profileToken: string;
+  profileName: string;
+};
+type SignupResponse = {
+  profileId: string;
+  profileToken: string;
+  profile: {
+    name?: string;
+  };
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const deepReportLoadingSteps = [
@@ -214,8 +286,9 @@ const deepReportLoadingSteps = [
   "Gemini 3 Flash 심화 분석",
   "포트폴리오 우선순위 편집",
 ];
-const LOGIN_STORAGE_KEY = "career-scope-logged-in";
+const AUTH_SESSION_STORAGE_KEY = "career-scope-profile-session";
 const FIELD_STORAGE_KEY = "career-scope-selected-field";
+const INTENT_STORAGE_KEY = "career-scope-intents";
 const CURRENT_USER_ID = "user-current";
 const DEFAULT_DEMO_SCHOOL = "경기대학교";
 const DEFAULT_DEMO_DEPARTMENT = "컴퓨터공학과";
@@ -243,8 +316,86 @@ const majorOptions = [
   "전자공학과",
   "산업공학과",
 ];
+const inhaMajorOptions = [
+  "컴퓨터공학과",
+  "인공지능공학과",
+  "데이터사이언스학과",
+  "스마트모빌리티공학과",
+  "디자인테크놀로지학과",
+  "전기전자공학부",
+  "반도체시스템공학과",
+  "이차전지융합학과",
+  "기계공학과",
+  "항공우주공학과",
+  "조선해양공학과",
+  "산업경영공학과",
+  "화학공학과",
+  "고분자공학과",
+  "신소재공학과",
+  "사회인프라공학과",
+  "환경공학과",
+  "공간정보공학과",
+  "건축공학전공",
+  "건축학전공",
+  "에너지자원공학과",
+  "수학과",
+  "통계학과",
+  "물리학과",
+  "화학과",
+  "해양과학과",
+  "식품영양학과",
+  "경영학과",
+  "파이낸스경영학과",
+  "아태물류학부",
+  "국제통상학과",
+  "국어교육과",
+  "영어교육과",
+  "사회교육과",
+  "체육교육과",
+  "교육학과",
+  "수학교육과",
+  "행정학과",
+  "정치외교학과",
+  "미디어커뮤니케이션학과",
+  "경제학과",
+  "소비자학과",
+  "아동심리학과",
+  "사회복지학과",
+  "한국어문학과",
+  "사학과",
+  "철학과",
+  "중국학과",
+  "일본언어문화학과",
+  "영미유럽인문융합학부",
+  "문화콘텐츠문화경영학과",
+  "의예과",
+  "간호학과",
+  "조형예술학과",
+  "디자인융합학과",
+  "스포츠과학과",
+  "연극영화학과",
+  "의류디자인학과",
+  "메카트로닉스공학과",
+  "소프트웨어융합공학과",
+  "산업경영학과",
+  "금융투자학과",
+  "반도체산업융합학과",
+  "자유전공융합학부",
+  "공학융합학부",
+  "자연과학융합학부",
+  "경영융합학부",
+  "사회과학융합학부",
+  "인문융합학부",
+  "IBT학과",
+  "ISE학과",
+  "KLC학과",
+  "생명공학과",
+  "생명과학과",
+  "첨단바이오의약학과",
+  "바이오식품공학과",
+];
 const schoolMajorOptions: Record<string, string[]> = {
-  인하대학교: ["컴퓨터공학과", "인공지능공학과", "데이터사이언스학과", "정보통신공학과"],
+  인하대학교: inhaMajorOptions,
   서울대학교: ["컴퓨터공학과", "컴퓨터공학부", "전기정보공학부"],
   연세대학교: ["컴퓨터과학과", "인공지능학과", "소프트웨어학부"],
   고려대학교: ["컴퓨터학과", "데이터과학과", "스마트보안학부"],
@@ -536,7 +687,61 @@ const fallbackInsight: Insight = {
       tags: ["인공지능", "데이터 과학 및 빅데이터", "HCI"],
     },
   ],
+  curriculumSource: "seed",
+  curriculumTrust: {
+    sourceKind: "official-seed",
+    label: "공식 출처 seed",
+    description: "공식 웹 출처와 버전관리 seed를 함께 사용한 MVP 검증 데이터입니다.",
+    sourceUrl: null,
+    evidenceFile: "apps/api/src/data/curriculumSeed.ts",
+    sourceCourseSignalCount: 0,
+    confidence: "medium",
+  },
 };
+
+function readAuthSession(): AuthSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const session = JSON.parse(raw) as Partial<AuthSession>;
+    return session.profileId && session.profileToken
+      ? {
+          profileId: session.profileId,
+          profileToken: session.profileToken,
+          profileName: session.profileName || "사용자",
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveAuthSession(session: AuthSession) {
+  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function readIntentRecords(): IntentRecord[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(INTENT_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as IntentRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveIntentRecords(records: IntentRecord[]) {
+  window.localStorage.setItem(INTENT_STORAGE_KEY, JSON.stringify(records));
+}
 
 export default function Home() {
   const [step, setStep] = useState<Step>("landing");
@@ -544,7 +749,11 @@ export default function Home() {
   const [department, setDepartment] = useState("");
   const [field, setField] = useState("");
   const [insight, setInsight] = useState<Insight | null>(null);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [signupError, setSignupError] = useState("");
+  const [intentRecords, setIntentRecords] = useState<IntentRecord[]>([]);
   const [profileName, setProfileName] = useState("김하늘");
   const [introLength, setIntroLength] = useState(43);
   const [signupField, setSignupField] = useState("");
@@ -555,8 +764,9 @@ export default function Home() {
   const [profilePortfolioStats, setProfilePortfolioStats] =
     useState<PortfolioStats>(defaultPortfolioStats);
 
-  const activeInsight = insight || fallbackInsight;
-  const majorSuggestions = useMemo(() => getMajorOptionsForSchool(school), [school]);
+	  const activeInsight = insight || fallbackInsight;
+	  const sourceTrust = getCurriculumSourceTrust(activeInsight);
+	  const majorSuggestions = useMemo(() => getMajorOptionsForSchool(school), [school]);
   const schoolComparison = useMemo(
     () => buildSchoolMajorComparison(school, department, field),
     [school, department, field],
@@ -573,6 +783,64 @@ export default function Home() {
     [completedPortfolioEntries],
   );
 
+  async function fetchInsightForSelection(
+    selectedSchool: string,
+    selectedDepartment: string,
+    selectedField: string,
+  ) {
+    const resolvedSchool = selectedSchool || DEFAULT_DEMO_SCHOOL;
+    const resolvedDepartment = selectedDepartment || DEFAULT_DEMO_DEPARTMENT;
+    const query = new URLSearchParams({
+      school: resolvedSchool,
+      major: resolvedDepartment,
+      department: resolvedDepartment,
+      field: selectedField,
+    }).toString();
+
+    try {
+      const response = await fetch(`${API_URL}/api/insights?${query}`);
+      if (!response.ok) {
+        throw new Error("Insight API failed");
+      }
+      const data = (await response.json()) as Insight;
+      setServerStatus("available");
+      setInsight(data);
+      return data;
+    } catch {
+      const fallback = {
+        ...fallbackInsight,
+        target: {
+          ...fallbackInsight.target,
+          school: resolvedSchool,
+          department: resolvedDepartment,
+        },
+      };
+      setServerStatus("unavailable");
+      setInsight(fallback);
+      return fallback;
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch(`${API_URL}/health`)
+      .then((response) => {
+        if (isMounted) {
+          setServerStatus(response.ok ? "available" : "unavailable");
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setServerStatus("unavailable");
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
@@ -582,15 +850,35 @@ export default function Home() {
       const selectedMajor = normalizeMajorName(params.get("major") || "");
       const rawField = params.get("field") || (view ? storedField : null);
       const selectedField = rawField ? normalizeCareerField(rawField) : "";
+      const storedSession = readAuthSession();
+      const storedIntents = readIntentRecords();
 
       setSchool(selectedSchool);
       setDepartment(selectedMajor);
       setField(selectedField);
       setSignupField(selectedField);
+      setAuthSession(storedSession);
+      setIntentRecords(storedIntents);
+      if (storedSession) {
+        setProfileName(storedSession.profileName);
+      }
       window.sessionStorage.setItem(FIELD_STORAGE_KEY, selectedField);
 
       if (view === "report") {
-        setInsight(fallbackInsight);
+        setInsight({
+          ...fallbackInsight,
+          target: {
+            ...fallbackInsight.target,
+            school: selectedSchool || DEFAULT_DEMO_SCHOOL,
+            department: selectedMajor || DEFAULT_DEMO_DEPARTMENT,
+          },
+        });
+        void fetchInsightForSelection(selectedSchool, selectedMajor, selectedField);
+        void recordEvent({
+          eventName: "report_viewed",
+          source: "report",
+          metadata: { school: selectedSchool, department: selectedMajor, field: selectedField },
+        });
         setStep("report");
         return;
       }
@@ -603,14 +891,21 @@ export default function Home() {
         return;
       }
       if (view === "dashboard") {
-        window.localStorage.setItem(LOGIN_STORAGE_KEY, "true");
-        setIsLoggedIn(true);
-        setInsight(fallbackInsight);
-        setStep("dashboard");
+        setIsLoggedIn(Boolean(storedSession));
+        setInsight({
+          ...fallbackInsight,
+          target: {
+            ...fallbackInsight.target,
+            school: selectedSchool || DEFAULT_DEMO_SCHOOL,
+            department: selectedMajor || DEFAULT_DEMO_DEPARTMENT,
+          },
+        });
+        void fetchInsightForSelection(selectedSchool, selectedMajor, selectedField);
+        setStep(storedSession ? "dashboard" : "signupNotice");
         return;
       }
 
-      setIsLoggedIn(window.localStorage.getItem(LOGIN_STORAGE_KEY) === "true");
+      setIsLoggedIn(Boolean(storedSession));
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
@@ -693,14 +988,21 @@ export default function Home() {
         throw new Error("Insight API failed");
       }
       const data = (await response.json()) as Insight;
+      setServerStatus("available");
       setInsight(data);
     } catch {
+      setServerStatus("unavailable");
       setInsight({
         ...fallbackInsight,
         target: { ...fallbackInsight.target, school: selectedSchool, department: selectedDepartment },
       });
       await delay;
     } finally {
+      void recordEvent({
+        eventName: "report_viewed",
+        source: "report",
+        metadata: { school: selectedSchool, department: selectedDepartment, field: selectedField },
+      });
       setStep("report");
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -709,11 +1011,12 @@ export default function Home() {
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    setSignupError("");
     const payload = {
       school,
       department,
-      email: "student@kyonggi.ac.kr",
-      name: "김하늘",
+      email: String(form.get("email") || ""),
+      name: String(form.get("name") || ""),
       role: String(form.get("role") || signupField),
       interest: signupField,
       wantsToMeet: matchingDistance,
@@ -724,19 +1027,38 @@ export default function Home() {
       portfolio: JSON.stringify(completedPortfolioEntries),
     };
 
-    setProfileName(payload.name || "김하늘");
-    setProfilePortfolioStats(portfolioStats);
-    window.sessionStorage.setItem(FIELD_STORAGE_KEY, payload.role);
-    window.sessionStorage.setItem("career-scope-signup", JSON.stringify(payload));
-
     try {
-      await fetch(`${API_URL}/api/signup`, {
+      const response = await fetch(`${API_URL}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch {
-      // Demo flow continues even if the local API is not running.
+      const result = (await response.json()) as SignupResponse | { error?: string };
+
+      if (!response.ok) {
+        throw new Error("error" in result && result.error ? result.error : "회원가입에 실패했습니다.");
+      }
+
+      setServerStatus("available");
+      const session = {
+        profileId: (result as SignupResponse).profileId,
+        profileToken: (result as SignupResponse).profileToken,
+        profileName: (result as SignupResponse).profile.name || payload.name,
+      };
+      saveAuthSession(session);
+      setAuthSession(session);
+      setProfileName(session.profileName);
+      setProfilePortfolioStats(portfolioStats);
+      window.sessionStorage.setItem(FIELD_STORAGE_KEY, payload.role);
+      window.sessionStorage.setItem("career-scope-signup", JSON.stringify(payload));
+    } catch (error) {
+      setServerStatus("unavailable");
+      setSignupError(
+        error instanceof Error
+          ? error.message
+          : "API 서버에 연결하지 못해 프로필을 만들 수 없습니다.",
+      );
+      return;
     }
 
     try {
@@ -765,7 +1087,7 @@ export default function Home() {
       // Keep the existing demo recommendations if complement matching is unavailable.
     }
 
-    completeLogin();
+    completeLogin(readAuthSession());
   }
 
   function continueToSignup() {
@@ -773,20 +1095,31 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function completeLogin() {
-    window.localStorage.setItem(LOGIN_STORAGE_KEY, "true");
+  function completeLogin(nextSession: AuthSession | null = authSession) {
+    const session = nextSession ?? readAuthSession();
+    if (!session) {
+      setStep("signupNotice");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    setAuthSession(session);
     setIsLoggedIn(true);
+    setProfileName(session.profileName);
     setStep("dashboard");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function logout() {
-    window.localStorage.removeItem(LOGIN_STORAGE_KEY);
+    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    window.localStorage.removeItem(INTENT_STORAGE_KEY);
     window.localStorage.removeItem("career-scope-token");
     window.localStorage.removeItem("token");
     window.localStorage.removeItem("authToken");
     window.sessionStorage.clear();
     window.history.replaceState(null, "", "/");
+    setAuthSession(null);
+    setIntentRecords([]);
     setIsLoggedIn(false);
     setStep("landing");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -807,6 +1140,107 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function recordMeetingIntent({
+    label,
+    reason,
+    source,
+    targetId,
+    targetType,
+  }: {
+    label: string;
+    reason: string;
+    source: "report" | "dashboard";
+    targetId: string;
+    targetType: "peer" | "meeting";
+  }) {
+    const session = authSession ?? readAuthSession();
+    if (!session) {
+      setStep("signupNotice");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    void recordEvent({
+      eventName: "recommendation_clicked",
+      profileId: session.profileId,
+      profileToken: session.profileToken,
+      source,
+      metadata: { targetType, targetId, label },
+    });
+
+    const fallbackRecord: IntentRecord = {
+      id: `${targetType}-${targetId}-${Date.now()}`,
+      targetType,
+      targetId,
+      label,
+      reason,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/api/meeting-intents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileId: session.profileId,
+          profileToken: session.profileToken,
+          targetType,
+          targetId,
+          source,
+          reason,
+        }),
+      });
+      const payload = (await response.json()) as { ok?: boolean; intentId?: string };
+      if (!response.ok || !payload.ok || !payload.intentId) {
+        throw new Error("intent failed");
+      }
+      setServerStatus("available");
+      const record = { ...fallbackRecord, id: payload.intentId };
+      setIntentRecords((records) => {
+        const next = [record, ...records.filter((item) => item.id !== record.id)];
+        saveIntentRecords(next);
+        return next;
+      });
+    } catch {
+      setServerStatus("unavailable");
+      setIntentRecords((records) => {
+        const next = [fallbackRecord, ...records];
+        saveIntentRecords(next);
+        return next;
+      });
+    }
+  }
+
+  async function recordEvent({
+    eventName,
+    metadata,
+    profileId,
+    profileToken,
+    source,
+  }: {
+    eventName: "report_viewed" | "signup_completed" | "recommendation_clicked" | "intent_created";
+    metadata?: Record<string, unknown>;
+    profileId?: string;
+    profileToken?: string;
+    source: "report" | "dashboard" | "signup";
+  }) {
+    try {
+      await fetch(`${API_URL}/api/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventName,
+          profileId,
+          profileToken,
+          source,
+          metadata,
+        }),
+      });
+    } catch {
+      // Event logging is observational; never block the MVP path.
+    }
+  }
+
   return (
     <main>
       {step !== "dashboard" && (
@@ -818,7 +1252,7 @@ export default function Home() {
       )}
 
       {step === "landing" && (
-        <section className="hero">
+        <LandingView>
           <div className="hero-copy">
             <p className="eyebrow">전공 데이터 기반 커리어 리포트</p>
             <h1>
@@ -885,7 +1319,7 @@ export default function Home() {
               <strong>이미 2,847명이 분석했어요</strong>
             </div>
           </div>
-        </section>
+        </LandingView>
       )}
 
       {step === "analyzing" && (
@@ -918,7 +1352,7 @@ export default function Home() {
       )}
 
       {step === "report" && (
-        <section className="result-page">
+        <ReportView>
           <div className="breadcrumb">
             <HomeIcon size={17} />
             <ChevronRight size={16} />
@@ -953,10 +1387,10 @@ export default function Home() {
                   <BookOpen size={18} />
                 </span>
                 <div>
-                  <small>분석 기준</small>
-                  <strong>Neon 커리큘럼 DB</strong>
-                </div>
-              </div>
+	                  <small>분석 기준</small>
+	                  <strong>{sourceTrust.label}</strong>
+	                </div>
+	              </div>
               <div className="report-meta">
                 <span>
                   <CalendarDays size={18} />
@@ -971,11 +1405,32 @@ export default function Home() {
                   <Users size={18} />
                 </span>
                 <div>
-                  <small>비교 대상</small>
-                  <strong>10개 대학 커리큘럼</strong>
-                </div>
-              </div>
-            </div>
+	                  <small>비교 대상</small>
+	                  <strong>10개 대학 커리큘럼</strong>
+	                </div>
+	              </div>
+	            </div>
+	            <div className={`source-trust-banner ${sourceTrust.tone}`}>
+	              <ShieldCheck size={17} />
+	              <div className="source-trust-copy">
+	                <span>{sourceTrust.description}</span>
+	                <small>
+	                  신뢰도 {formatCurriculumTrustConfidence(sourceTrust.confidence)}
+	                  {sourceTrust.sourceCourseSignalCount > 0
+	                    ? ` · 과목 신호 ${sourceTrust.sourceCourseSignalCount}개`
+	                    : ""}
+	                  {sourceTrust.sourceUrl ? (
+	                    <>
+	                      {" · "}
+	                      <a href={sourceTrust.sourceUrl} target="_blank" rel="noreferrer">
+	                        출처 확인
+	                      </a>
+	                    </>
+	                  ) : null}
+	                </small>
+	              </div>
+	            </div>
+              {serverStatus === "unavailable" && <ServerStatusBanner />}
 
             <FieldComparisonReport
               school={school}
@@ -985,9 +1440,9 @@ export default function Home() {
             />
 
             <section className="locked-report result-lock">
-              <div>
-                <p className="eyebrow">심화 리포트 미리보기</p>
-                <h3>4,900원 리포트에서 잠금 해제되는 정보</h3>
+	              <div>
+	                <p className="eyebrow">심화 리포트 미리보기</p>
+	                <h3>관심 등록 후 우선 안내받을 심화 정보</h3>
                 <div className="locked-list">
                   {activeInsight.lockedReport.bullets.map((bullet) => (
                     <span key={bullet}>
@@ -1003,7 +1458,7 @@ export default function Home() {
               </button>
             </section>
           </article>
-        </section>
+        </ReportView>
       )}
 
       {step === "signupNotice" && (
@@ -1012,27 +1467,27 @@ export default function Home() {
             <div className="notice-mark">
               <ShieldCheck size={42} />
             </div>
-            <p className="eyebrow">로그인 또는 회원가입</p>
-            <h2>다른 학생과 비교하려면 먼저 계정으로 이어가야 해요</h2>
-            <p>
-              로그인하면 바로 메인에서 비교 결과를 볼 수 있고, 처음이라면 간단한
-              회원가입 온보딩 후 메인으로 이동합니다.
-            </p>
-            <div className="auth-action-row">
-              <button className="secondary-cta" onClick={completeLogin}>
-                로그인하고 메인으로
-                <ArrowRight size={20} />
-              </button>
-              <button className="ghost-cta" onClick={continueToSignup}>
-                회원가입하기
-              </button>
-            </div>
+	            <p className="eyebrow">프로필 생성</p>
+	            <h2>다른 학생과 비교하려면 먼저 검증용 프로필이 필요해요</h2>
+	            <p>
+	              이름, 이메일, 관심 분야만 받아 서버가 발급한 프로필 토큰으로 추천 행동을
+	              안전하게 기록합니다.
+	            </p>
+	            <div className="auth-action-row">
+	              <button className="secondary-cta" onClick={continueToSignup}>
+	                프로필 만들고 이어가기
+	                <ArrowRight size={20} />
+	              </button>
+	              <button className="ghost-cta" onClick={() => completeLogin()}>
+	                기존 세션으로 이어가기
+	              </button>
+	            </div>
           </div>
         </section>
       )}
 
       {step === "signup" && (
-        <section className="onboarding-shell">
+        <SignupView>
           <div className="onboarding-steps" aria-label="회원가입 온보딩 단계">
             <OnboardingStep active step="1" label="STEP 1" title="기본 정보" />
             <OnboardingStep step="2" label="STEP 2" title="동료 매칭" />
@@ -1045,12 +1500,34 @@ export default function Home() {
           </div>
 
           <form className="onboarding-card" id="onboarding-form" onSubmit={handleSignup}>
+            {serverStatus === "unavailable" && <ServerStatusBanner />}
             <section className="onboarding-section basic-section">
               <SectionNumber number="1" />
               <div className="section-copy">
                 <h3>기본 정보</h3>
                 <p>나를 소개하고 기본 정보를 입력해주세요.</p>
               </div>
+              <label className="role-field">
+                <span>
+                  이름 <em>*</em>
+                </span>
+                <input
+                  name="name"
+                  placeholder="예: 김하늘"
+                  required
+                />
+              </label>
+              <label className="role-field">
+                <span>
+                  이메일 <em>*</em>
+                </span>
+                <input
+                  name="email"
+                  placeholder="예: student@example.com"
+                  required
+                  type="email"
+                />
+              </label>
               <label className="intro-field">
                 <span>
                   자기소개 <small>100자 이내</small>
@@ -1120,21 +1597,29 @@ export default function Home() {
             </section>
           </form>
 
-          <button className="onboarding-submit" form="onboarding-form" type="submit">
-            다음 단계
-            <ArrowRight size={20} />
-          </button>
+            <button className="onboarding-submit" form="onboarding-form" type="submit">
+              다음 단계
+              <ArrowRight size={20} />
+            </button>
+          {signupError && (
+            <p className="onboarding-error" role="alert">
+              {signupError}
+            </p>
+          )}
           <p className="onboarding-note">입력한 내용은 언제든지 수정할 수 있습니다.</p>
-        </section>
+        </SignupView>
       )}
 
       {step === "dashboard" && (
         <AppDashboard
           field={field}
           insight={activeInsight}
+          intentRecords={intentRecords}
           profileName={profileName}
           portfolioStats={profilePortfolioStats}
+          serverStatus={serverStatus}
           onLogout={logout}
+          onRecordIntent={recordMeetingIntent}
         />
       )}
     </main>
@@ -1189,18 +1674,45 @@ function Header({
   );
 }
 
+function ServerStatusBanner() {
+  return (
+    <div className="server-status-banner" role="status">
+      <Info size={17} />
+      <div>
+        <strong>서버 연결이 불안정합니다.</strong>
+        <span>
+          리포트는 데모 데이터로 계속 볼 수 있지만, 프로필 생성과 추천 참여 의사는 서버에
+          저장되지 않을 수 있습니다.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function AppDashboard({
   field,
   insight,
+  intentRecords,
   profileName,
   portfolioStats,
+  serverStatus,
   onLogout,
+  onRecordIntent,
 }: {
   field: string;
   insight: Insight;
+  intentRecords: IntentRecord[];
   profileName: string;
   portfolioStats: PortfolioStats;
+  serverStatus: ServerStatus;
   onLogout: () => void;
+  onRecordIntent: (intent: {
+    label: string;
+    reason: string;
+    source: "report" | "dashboard";
+    targetId: string;
+    targetType: "peer" | "meeting";
+  }) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
     if (typeof window === "undefined") {
@@ -1215,6 +1727,7 @@ function AppDashboard({
   const [deepReportError, setDeepReportError] = useState("");
   const [showOperatorNotice, setShowOperatorNotice] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus | null>(null);
   const [activeMessagePeer, setActiveMessagePeer] = useState<Insight["peers"][number] | null>(
     null,
   );
@@ -1227,7 +1740,54 @@ function AppDashboard({
     return new URLSearchParams(window.location.search).get("profileUserId") || CURRENT_USER_ID;
   });
   const peers = [...insight.peers, ...dashboardExtraPeers].slice(0, 5);
+  const recommendedMeetings = dummyMeetings.slice(0, 2);
   const tabHeading = dashboardTabHeadings[activeTab];
+  const validationMetrics = validationStatus
+    ? [
+        {
+          label: "리포트 조회",
+          value: validationStatus.funnel.counts.report_viewed.toLocaleString(),
+        },
+        {
+          label: "가입 전환",
+          value: formatFunnelRate(validationStatus.funnel.rates.signupFromReport),
+        },
+        {
+          label: "추천 클릭",
+          value: formatFunnelRate(validationStatus.funnel.rates.recommendationClickFromReport),
+        },
+        {
+          label: "참여 의사",
+          value: formatFunnelRate(validationStatus.funnel.rates.intentFromReport),
+        },
+      ]
+    : [];
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch(`${API_URL}/api/validation-status`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Validation status unavailable");
+        }
+        return (await response.json()) as ValidationStatus;
+      })
+      .then((payload) => {
+        if (isMounted) {
+          setValidationStatus(payload);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setValidationStatus(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function selectTab(tab?: DashboardTab) {
     if (!tab) {
@@ -1368,7 +1928,7 @@ function AppDashboard({
   }
 
   return (
-    <div className="app-dashboard">
+    <DashboardView>
       <aside className="app-sidebar">
         <div className="app-sidebar-brand">
           <span className="logo-mark">
@@ -1475,6 +2035,8 @@ function AppDashboard({
           </div>
         </div>
 
+        {serverStatus === "unavailable" && <ServerStatusBanner />}
+
         {activeTab === "home" && (
           <>
         <section className="distribution-card">
@@ -1565,6 +2127,61 @@ function AppDashboard({
           ))}
         </div>
 
+        {validationStatus && (
+          <section className="validation-status-card">
+            <div className="section-heading-row">
+              <div>
+                <p className="eyebrow">MVP 검증판</p>
+                <h2>전환/데이터 QA</h2>
+              </div>
+              <span className={`validation-readiness ${validationStatus.readiness}`}>
+                {validationStatus.readiness === "ready-to-interpret"
+                  ? "해석 가능"
+                  : validationStatus.readiness === "collecting-signal"
+                    ? "신호 수집 중"
+                    : "트래픽 필요"}
+              </span>
+            </div>
+            <div className="validation-metric-grid">
+              {validationMetrics.map((metric) => (
+                <article key={metric.label}>
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                </article>
+              ))}
+            </div>
+            <div className="validation-source-row">
+              <span>저장소: {validationStatus.storage}</span>
+              <span>커리큘럼: {validationStatus.curriculumSource}</span>
+              <span>
+                공식 출처 {validationStatus.dataCoverage.officialSourceCount}개 · 출처 연결 학과{" "}
+                {validationStatus.dataCoverage.sourceBackedDepartmentCount}개
+              </span>
+              {validationStatus.dataCoverage.inhaDepartmentCount && (
+                <span>인하대 모집단위 {validationStatus.dataCoverage.inhaDepartmentCount}개</span>
+              )}
+              {validationStatus.dataCoverage.inhaPublicCourseBackedDepartmentCount && (
+                <span>
+                  ADIGA 교육과정{" "}
+                  {validationStatus.dataCoverage.inhaPublicCourseBackedDepartmentCount}개 ·
+                  수강신청{" "}
+                  {validationStatus.dataCoverage
+                    .inhaOfficialSugangCourseBackedAdmissionDepartmentCount ?? 0}개 · 출처 기반{" "}
+                  {validationStatus.dataCoverage.inhaSourceBackedAdmissionDepartmentCount ?? 0}개 ·
+                  아키타입 {validationStatus.dataCoverage.inhaArchetypeOnlyDepartmentCount ?? 0}개
+                </span>
+              )}
+            </div>
+            {validationStatus.qaWarnings.length > 0 && (
+              <ul className="validation-warning-list">
+                {validationStatus.qaWarnings.slice(0, 3).map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         <section className="similar-users">
           <div className="section-heading-row">
             <h2>나를 보완하는 사용자</h2>
@@ -1604,19 +2221,35 @@ function AppDashboard({
                           ))}
                         </div>
                         {peer.complementTags && peer.complementTags.length > 0 && (
-                          <p>
-                            보완: {peer.complementTags.slice(0, 2).join(", ")}
-                          </p>
+                          <p>보완: {peer.complementTags.slice(0, 2).join(", ")}</p>
                         )}
-                        <footer>
-                          <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
-                          <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
-                        </footer>
-                        <button
-                          className="letter-button"
-                          onClick={() => openMessage(peer)}
-                          type="button"
-                        >
+                        <p className="match-reason">
+                          {peer.matchReasons?.[0] ??
+                            "관심 분야와 활동 목표가 가까워 협업 가능성이 높습니다."}
+                        </p>
+                        {peer.networkSignalReason && (
+                          <p className="match-reason">{peer.networkSignalReason}</p>
+                        )}
+	                        <footer>
+	                          <span>공모전 {peer.id === "peer-1" ? "9회" : "7회"}</span>
+	                          <span>프로젝트 {peer.id === "peer-2" ? "4개" : "5개"}</span>
+	                        </footer>
+	                        <button
+	                          className="letter-button"
+	                          onClick={async () => {
+	                            await onRecordIntent({
+	                              label: peer.name,
+	                              reason:
+	                                peer.matchReasons?.[0] ??
+	                                "관심 분야와 활동 목표가 가까워 협업 가능성이 높습니다.",
+	                              source: "dashboard",
+	                              targetId: peer.id,
+	                              targetType: "peer",
+	                            });
+	                            openMessage(peer);
+	                          }}
+	                          type="button"
+	                        >
                           <MessageSquareText size={16} />
                           메시지 보내기
                         </button>
@@ -1627,9 +2260,47 @@ function AppDashboard({
               ))}
             </div>
           </div>
-        </section>
-          </>
-        )}
+	        </section>
+	        <NetworkingIntentSummary intents={intentRecords} />
+	        <section className="recommended-meetings">
+	          <div className="section-heading-row">
+	            <div>
+	              <p className="eyebrow">다음 행동 추천</p>
+	              <h2>지금 참여하기 좋은 모임</h2>
+	            </div>
+	          </div>
+	          <div className="recommended-meeting-grid">
+	            {recommendedMeetings.map((meeting) => {
+	              const reason = `${meeting.field} 관심사와 현재 포트폴리오 보완 목표가 연결됩니다.`;
+	              return (
+	                <article key={meeting.id}>
+	                  <span>{meeting.field}</span>
+	                  <h3>{meeting.title}</h3>
+	                  <p>{reason}</p>
+	                  <small>
+	                    {meeting.date} · {meeting.location} · {meeting.memberCount}/{meeting.maxMembers}명
+	                  </small>
+	                  <button
+	                    type="button"
+	                    onClick={() =>
+	                      onRecordIntent({
+	                        label: meeting.title,
+	                        reason,
+	                        source: "dashboard",
+	                        targetId: meeting.id,
+	                        targetType: "meeting",
+	                      })
+	                    }
+	                  >
+	                    관심 남기기
+	                  </button>
+	                </article>
+	              );
+	            })}
+	          </div>
+	        </section>
+	          </>
+	        )}
 
         {activeTab === "report" && (
           <DashboardReportPage
@@ -1645,6 +2316,7 @@ function AppDashboard({
           <NetworkingPage
             peers={peers}
             onMessagePeer={openMessage}
+            onRecordIntent={onRecordIntent}
             onViewProfile={viewPeerProfile}
           />
         )}
@@ -1652,6 +2324,7 @@ function AppDashboard({
           <ProfilePage
             currentUserId={CURRENT_USER_ID}
             onMessagePeer={openMessage}
+            onRecordIntent={onRecordIntent}
             profileUserId={profileUserId}
             profileName={profileName}
             portfolioStats={portfolioStats}
@@ -1669,7 +2342,7 @@ function AppDashboard({
           peer={activeMessagePeer}
         />
       </section>
-    </div>
+    </DashboardView>
   );
 }
 
@@ -1783,16 +2456,16 @@ function DeepReportPreview({
 
   return (
     <section className={`compare-preview-page${isGenerating ? " is-generating" : ""}`}>
-      <div className="compare-hero-copy">
-        <span>
-          <LockKeyhole size={16} />
-          심화 리포트 · 4,900원
-        </span>
-        <h2>비교 보기는 심화 리포트에 포함돼요</h2>
-        <p>
-          내 분석 결과와 다른 학생의 데이터를 비교해 강점과 성장 가능성을 더 명확히
-          볼 수 있습니다.
-        </p>
+	      <div className="compare-hero-copy">
+	        <span>
+	          <LockKeyhole size={16} />
+	          심화 리포트 관심 등록
+	        </span>
+	        <h2>비교 보기는 수요 검증 후 열립니다</h2>
+	        <p>
+	          지금은 결제보다 어떤 비교가 실제 행동으로 이어지는지 먼저 확인하고 있어요.
+	          관심을 남기면 심화 리포트 우선 알림을 받을 수 있습니다.
+	        </p>
       </div>
 
       <div className="compare-preview-grid">
@@ -1860,8 +2533,8 @@ function DeepReportPreview({
                 <div className="compare-lock-icon">
                   <LockKeyhole size={32} />
                 </div>
-                <h3>심화 리포트 결제 후 확인</h3>
-                <p>비교 보기, 학교별 활동 조합, 포트폴리오 보완 우선순위가 함께 열립니다.</p>
+	                <h3>심화 리포트 관심 등록 후 확인</h3>
+	                <p>비교 보기, 학교별 활동 조합, 포트폴리오 보완 우선순위 수요를 먼저 검증합니다.</p>
                 <ul className="locked-feature-list">
                   <li>
                     <CheckCircle2 size={16} />
@@ -1884,9 +2557,9 @@ function DeepReportPreview({
                 <small className="unlock-note">
                   Gemini API로 커리큘럼 비교 데이터를 실시간 분석합니다.
                 </small>
-                <button onClick={onUnlock} type="button">
-                  심화 리포트 생성하기 · 4,900원
-                </button>
+	                <button onClick={onUnlock} type="button">
+	                  심화 리포트 관심 등록하기
+	                </button>
               </>
             )}
           </div>
@@ -2203,10 +2876,18 @@ function splitExecutiveSummary(summary: string) {
 function NetworkingPage({
   peers,
   onMessagePeer,
+  onRecordIntent,
   onViewProfile,
 }: {
   peers: Insight["peers"];
   onMessagePeer: (peer: Insight["peers"][number]) => void;
+  onRecordIntent: (intent: {
+    label: string;
+    reason: string;
+    source: "report" | "dashboard";
+    targetId: string;
+    targetType: "peer" | "meeting";
+  }) => Promise<void>;
   onViewProfile: (peerId: string) => void;
 }) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -2311,16 +2992,43 @@ function NetworkingPage({
                     보완: {peer.complementTags.slice(0, 3).join(", ")}
                   </div>
                 )}
+                {peer.networkSignalReason && (
+                  <div className="networking-intent">{peer.networkSignalReason}</div>
+                )}
                 <div className="networking-tags">
                   {peer.tags.map((tag) => (
                     <span key={tag}>{tag}</span>
                   ))}
                 </div>
                 <footer>
-                  <button type="button" onClick={() => onViewProfile(peer.id)}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await onRecordIntent({
+                        label: peer.name,
+                        reason: peer.note,
+                        source: "dashboard",
+                        targetId: peer.id,
+                        targetType: "peer",
+                      });
+                      onViewProfile(peer.id);
+                    }}
+                  >
                     프로필 보기
                   </button>
-                  <button onClick={() => onMessagePeer(peer)} type="button">
+                  <button
+                    onClick={async () => {
+                      await onRecordIntent({
+                        label: peer.name,
+                        reason: peer.note,
+                        source: "dashboard",
+                        targetId: peer.id,
+                        targetType: "peer",
+                      });
+                      onMessagePeer(peer);
+                    }}
+                    type="button"
+                  >
                     <MessageSquareText size={16} />
                     메시지 보내기
                   </button>
@@ -2502,6 +3210,7 @@ function SettingsPage() {
 function ProfilePage({
   currentUserId,
   onMessagePeer,
+  onRecordIntent,
   profileUserId,
   profileName,
   portfolioStats,
@@ -2509,6 +3218,13 @@ function ProfilePage({
 }: {
   currentUserId: string;
   onMessagePeer: (peer: Insight["peers"][number]) => void;
+  onRecordIntent: (intent: {
+    label: string;
+    reason: string;
+    source: "report" | "dashboard";
+    targetId: string;
+    targetType: "peer" | "meeting";
+  }) => Promise<void>;
   profileUserId: string;
   profileName: string;
   portfolioStats: PortfolioStats;
@@ -2554,15 +3270,40 @@ function ProfilePage({
           {!isOwnProfile && (
             <div className="profile-action-row">
               <button
-                className="profile-primary-button"
-                disabled={!peer}
-                onClick={() => peer && onMessagePeer(peer)}
-                type="button"
-              >
+	                className="profile-primary-button"
+	                disabled={!peer}
+	                onClick={async () => {
+	                  if (!peer) {
+	                    return;
+	                  }
+	                  await onRecordIntent({
+	                    label: peer.name,
+	                    reason: peer.matchReasons?.[0] ?? "프로필 메시지로 협업 가능성을 확인합니다.",
+	                    source: "dashboard",
+	                    targetId: peer.id,
+	                    targetType: "peer",
+	                  });
+	                  onMessagePeer(peer);
+	                }}
+	                type="button"
+	              >
                 <MessageSquareText size={16} />
                 메시지 보내기
               </button>
-              <button className="profile-secondary-button" type="button">
+              <button
+                className="profile-secondary-button"
+                onClick={() =>
+                  peer &&
+                  onRecordIntent({
+                    label: peer.name,
+                    reason: peer.matchReasons?.[0] ?? "프로필을 저장해 협업 가능성을 나중에 확인합니다.",
+                    source: "dashboard",
+                    targetId: peer.id,
+                    targetType: "peer",
+                  })
+                }
+                type="button"
+              >
                 <BookOpen size={16} />
                 북마크
               </button>
@@ -2711,7 +3452,7 @@ const dashboardTabHeadings: Record<DashboardTab, { title: string; description: s
   },
   report: {
     title: "분석 리포트",
-    description: "기본 리포트는 무료로 보고, 비교 보기는 4,900원 심화 리포트에서 확인하세요.",
+    description: "기본 리포트는 무료로 보고, 비교 보기는 심화 리포트 관심 등록으로 수요를 확인합니다.",
   },
   networking: {
     title: "네트워킹",
@@ -2822,11 +3563,11 @@ const operatorNotices = [
     message: "네트워킹 요청은 상대가 수락한 뒤에만 연락처가 공개됩니다.",
     time: "방금 전",
   },
-  {
-    title: "심화 리포트 안내",
-    message: "비교 보기와 활동 우선순위는 4,900원 심화 리포트에 포함되어 있어요.",
-    time: "10분 전",
-  },
+	  {
+	    title: "심화 리포트 안내",
+	    message: "비교 보기와 활동 우선순위는 심화 리포트 관심 등록 후 우선 안내됩니다.",
+	    time: "10분 전",
+	  },
   {
     title: "매칭 품질 업데이트",
     message: "포트폴리오 태그를 추가하면 추천 동료 정확도가 더 올라갑니다.",
@@ -3123,6 +3864,10 @@ const dashboardExtraPeers: Insight["peers"] = [
   },
 ];
 
+function formatFunnelRate(rate: number) {
+  return `${Math.round(rate * 100)}%`;
+}
+
 function getMatchBadgeTone(rate: number) {
   if (rate >= 90) {
     return "match-high";
@@ -3249,6 +3994,55 @@ function getNetworkFilterCopy(selectedTags: string[]) {
         ? `“${selectedTags[0]} 관심사가 보여 연락드려요. 서로의 경험을 나누며 같이 성장해보고 싶습니다.”`
         : "“같은 웹/앱 개발 관심사라 연락드려요. 이번 프로젝트에서 API 설계와 배포를 같이 맡아볼 동료를 찾고 있습니다.”",
   };
+}
+
+function getCurriculumSourceTrust(insight: Insight) {
+  if (insight.curriculumTrust) {
+    return {
+      label: insight.curriculumTrust.label,
+      tone: insight.curriculumTrust.sourceKind,
+      description: insight.curriculumTrust.description,
+      sourceUrl: insight.curriculumTrust.sourceUrl,
+      sourceCourseSignalCount: insight.curriculumTrust.sourceCourseSignalCount,
+      confidence: insight.curriculumTrust.confidence,
+    };
+  }
+
+  if (insight.curriculumSource === "database") {
+    return {
+      label: "공식 출처 기반 DB",
+      tone: "database",
+      description: "Postgres에 적재된 커리큘럼 데이터로 분석했습니다.",
+      sourceUrl: null,
+      sourceCourseSignalCount: 0,
+      confidence: "high",
+    };
+  }
+
+  return {
+    label: "공식 출처 seed",
+    tone: "seed",
+    description: "공식 웹 출처와 버전관리 seed를 함께 사용한 MVP 검증 데이터입니다.",
+    sourceUrl: null,
+    sourceCourseSignalCount: 0,
+    confidence: "medium",
+  };
+}
+
+function formatCurriculumTrustConfidence(confidence: CurriculumTrustConfidence) {
+  if (confidence === "high") {
+    return "높음";
+  }
+
+  if (confidence === "medium") {
+    return "중간";
+  }
+
+  if (confidence === "needs-review") {
+    return "검토 필요";
+  }
+
+  return confidence;
 }
 
 function buildPortfolioStats(entries: PortfolioEntry[]): PortfolioStats {

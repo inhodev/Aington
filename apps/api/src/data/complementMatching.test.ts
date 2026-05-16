@@ -75,3 +75,30 @@ test("reflects matching distance preference in score order", () => {
 
   assert.equal(matches[0].id, "ai-ux-peer");
 });
+
+test("adds observed intent signal to score and reasons", () => {
+  const matches = buildComplementMatches({
+    peers: [
+      {
+        ...basePeers[0],
+        id: "quiet-peer",
+        name: "조용한 동료",
+      },
+      {
+        ...basePeers[0],
+        id: "validated-peer",
+        name: "검증된 동료",
+      },
+    ],
+    weaknessAreas: ["보안"],
+    portfolioStats: { 프로젝트: 2, 논문: 1, 대회: 1, 기타: 1 },
+    matchingDistance: "balanced",
+    intentSignals: {
+      "validated-peer": 3,
+    },
+  });
+
+  assert.equal(matches[0].id, "validated-peer");
+  assert.equal(matches[0].observedIntentCount, 3);
+  assert.ok(matches[0].matchReasons.some((reason) => reason.includes("실제 학생 관심 3회")));
+});

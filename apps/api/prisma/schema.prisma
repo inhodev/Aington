@@ -74,19 +74,53 @@ model CurriculumRecord {
 }
 
 model Profile {
-  id          String   @id @default(cuid())
-  school      String
-  department  String
-  email       String
-  name        String
-  role        String
-  interest    String
-  wantsToMeet String
-  intro       String
-  portfolio   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String          @id @default(cuid())
+  school           String
+  department       String
+  email            String
+  name             String
+  role             String
+  interest         String
+  wantsToMeet      String
+  intro            String
+  portfolio        String?
+  selectedField    String?
+  matchingDistance String?
+  portfolioStats   String?
+  profileTokenHash String?
+  meetingIntents   MeetingIntent[]
+  events           EventLog[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([school, department])
   @@index([email])
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  profileId String?
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  eventName String
+  source    String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+  @@index([eventName])
+  @@index([createdAt])
+}
+
+model MeetingIntent {
+  id         String   @id @default(cuid())
+  profileId  String
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  targetType String
+  targetId   String
+  source     String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([profileId])
+  @@index([targetType, targetId])
 }

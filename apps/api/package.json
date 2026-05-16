@@ -10,6 +10,9 @@
     "test": "../../node_modules/.bin/tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
+    "data:collect": "tsx src/scripts/collectWebSources.ts",
+    "data:collect:inha": "tsx src/scripts/collectInhaAdigaCurriculum.ts",
+    "data:collect:inha:sugang": "tsx src/scripts/collectInhaSugangCourses.ts",
     "prisma:generate": "prisma generate",
     "db:push": "./node_modules/.bin/prisma db push",
     "db:seed": "tsx src/scripts/seedCurriculum.ts"
@@ -20,8 +23,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
-    "google-auth-library": "^9.15.1",
-    "mongoose": "^9.6.2"
+    "google-auth-library": "^9.15.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
