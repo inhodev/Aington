@@ -2,6 +2,29 @@
 
 Use this before showing Aington to a private student cohort.
 
+## Current Verification Snapshot
+
+Last verified: 2026-05-16 21:05 KST
+
+| Gate | Evidence | Status |
+| --- | --- | --- |
+| Local API regression | `npm test --workspace @career-scope/api` | Green, 35/35 passing |
+| Type safety | `npm run typecheck --workspaces --if-present` | Green |
+| Public source collector | `npm run data:collect --workspace @career-scope/api` | Green, `failedSourceCount: 0`, `warningCount: 1` expected |
+| Inha ADIGA collector | `npm run data:collect:inha --workspace @career-scope/api` | Green, 69 public departments, 58 course-backed |
+| Inha sugang collector | `npm run data:collect:inha:sugang --workspace @career-scope/api` | Green, 18 checked, 15 course-backed, 3 partial |
+| Production API coverage | `GET https://aington-api.vercel.app/api/validation-status` | Green for data gates, sample-size warning only |
+| Production web smoke | `https://aington.vercel.app` landing -> Inha EE report | Green, source trust shows Inha official sugang 64 signals |
+| Production auth smoke | Header `로그인` click | Green, opens profile notice without Next error |
+
+Current data coverage from production:
+
+- Inha admission units: 76
+- ADIGA public course-backed units: 58
+- Official Inha sugang course-backed units: 15
+- Final source-backed Inha units: 73
+- Remaining archetype-only units: 3 (`경영융합학부`, `사회과학융합학부`, `인문융합학부`)
+
 ## Must Be Green
 
 - `npm test --workspace @career-scope/api`

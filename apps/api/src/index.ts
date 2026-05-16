@@ -807,14 +807,15 @@ app.get("/api/insights", async (req, res) => {
     },
   };
   const topComparison = curriculumSimilarity.rankings[0];
+  const topComparisonLabel = topComparison
+    ? `${topComparison.school} ${topComparison.department}`
+    : "비교군";
   const curriculumSource = await resolveInsightCurriculumSource({ school, department });
 
   res.json({
     ...insight,
     ...curriculumReport,
-    headline: `${insight.target.school} ${insight.target.department}는 ${
-      topComparison?.school ?? "비교군"
-    }와 커리큘럼 구조가 가장 가깝습니다.`,
+    headline: `${insight.target.school} ${insight.target.department}는 ${topComparisonLabel}와 커리큘럼 구조가 가장 가깝습니다.`,
     curriculumSimilarity: displayCurriculumSimilarity,
     curriculumSource,
     curriculumTrust: buildCurriculumTrustSnapshot({

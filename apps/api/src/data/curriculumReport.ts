@@ -55,8 +55,10 @@ export function buildCurriculumReport(similarity: CurriculumSimilarityResult) {
     { label: "전공폭", score: clampScore(50 + Math.min(sharedAreas.length, 8) * 6) },
   ];
 
+  const topLabel = top ? `${top.school} ${top.department}` : "비교군";
+
   return {
-    headline: `${similarity.base.school} ${similarity.base.department}는 ${top?.school ?? "비교군"}와 커리큘럼 구조가 가장 가깝습니다.`,
+    headline: `${similarity.base.school} ${similarity.base.department}는 ${topLabel}와 커리큘럼 구조가 가장 가깝습니다.`,
     summary: buildSummary(similarity, top, sharedAreas, differentAreas),
     activities: buildActivities(sharedAreas, differentAreas),
     comparisons: topRankings.map((ranking) => ({

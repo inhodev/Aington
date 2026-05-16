@@ -38,8 +38,10 @@ career-scope/
 │   ├── api/                  # Express API 서버
 │   │   ├── src/data/demo.ts  # 데모 인사이트 데이터
 │   │   ├── src/data/curriculumSeed.ts # API 재현용 커리큘럼 seed
+│   │   ├── src/data/inhaDepartments.ts # 인하대 파일럿 모집단위 catalog
+│   │   ├── src/scripts/      # 공식 출처 수집/정제 QA 스크립트
 │   │   ├── src/index.ts      # API 엔트리포인트
-│   │   └── src/models/       # Mongoose 모델
+│   │   └── prisma/           # Prisma/Postgres schema
 │   └── web/                  # Next.js 웹 앱
 │       └── src/app/          # App Router 기반 화면
 ├── package.json              # 워크스페이스 스크립트
@@ -106,6 +108,7 @@ npm run lint       # Web ESLint 검사
 npm run typecheck  # 전체 워크스페이스 타입 검사
 npm run data:collect --workspace @career-scope/api # 공식 웹 출처 수집/정제 QA
 npm run data:collect:inha --workspace @career-scope/api # ADIGA 인하대 학과/교육과정 수집 QA
+npm run data:collect:inha:sugang --workspace @career-scope/api # 인하대 수강신청 전공 과목 수집 QA
 ```
 
 ## API

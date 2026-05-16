@@ -50,6 +50,7 @@ test("insights exposes official sugang trust for Inha departments missing ADIGA 
     assert.ok(payload.curriculumTrust.sourceUrl.includes("sugang.inha.ac.kr"));
     assert.ok(payload.curriculumTrust.sourceCourseSignalCount >= 60);
     assert.ok(payload.curriculumTrust.description.includes("전체 4년 교육과정표는 아닙니다"));
+    assert.match(payload.headline, /인하대 .+와 커리큘럼 구조가 가장 가깝습니다/);
   });
 });
 

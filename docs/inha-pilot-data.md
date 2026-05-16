@@ -9,6 +9,7 @@
 - Official current-term source: 인하대학교 수강신청 2026학년도 1학기 강의시간표 및 강의계획서
 - Official current-term URL: https://sugang.inha.ac.kr/sugang/SU_51001/Lec_Time_Search.aspx
 - Collection date: 2026-05-16
+- Latest QA rerun: 2026-05-16 21:05 KST
 
 ## What Is Covered
 
@@ -23,6 +24,13 @@
 - `/api/inha-departments` exposes the normalized catalog and coverage summary for QA.
 - Re-run the supplemental collector with `npm run data:collect:inha --workspace @career-scope/api`.
 - Re-run the official current-term collector with `npm run data:collect:inha:sugang --workspace @career-scope/api`.
+
+## Latest QA Evidence
+
+- `npm run data:collect --workspace @career-scope/api`: 6/6 sources fetched, `failedSourceCount: 0`; the single warning is the known Hanyang low generic-signal extraction warning.
+- `npm run data:collect:inha --workspace @career-scope/api`: 69 ADIGA public department pages found, 58 with non-empty course lists.
+- `npm run data:collect:inha:sugang --workspace @career-scope/api`: 18 Inha sugang departments checked, 15 course-backed, 3 partial.
+- Production `/api/validation-status`: 76 Inha units, 73 source-backed units, 3 archetype-only units, sample-size warning only.
 
 ## Current Limitation
 
