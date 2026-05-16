@@ -511,10 +511,16 @@ function buildDataCoverageSnapshot() {
       inhaSupplementalCurriculumCoverage.officialSugangCourseBackedAdmissionDepartmentCount,
     inhaOfficialSugangPartialAdmissionDepartmentCount:
       inhaSupplementalCurriculumCoverage.officialSugangPartialAdmissionDepartmentCount,
+    inhaOfficialSugangPartialAdmissionDepartments:
+      inhaSupplementalCurriculumCoverage.officialSugangPartialAdmissionDepartments,
     inhaSourceBackedAdmissionDepartmentCount:
       inhaSupplementalCurriculumCoverage.sourceBackedAdmissionDepartmentCount,
     inhaArchetypeOnlyDepartmentCount:
       inhaSupplementalCurriculumCoverage.archetypeOnlyDepartmentCount,
+    inhaArchetypeOnlyAdmissionDepartments:
+      inhaSupplementalCurriculumCoverage.archetypeOnlyAdmissionDepartments,
+    inhaNeedsReviewAdmissionDepartments:
+      inhaSupplementalCurriculumCoverage.missingAdmissionDepartments,
     inhaCurriculumSourceKindCounts:
       inhaSupplementalCurriculumCoverage.curriculumSourceKindCounts,
     seedDepartmentCount: seedDepartmentKeys.size,
@@ -696,6 +702,11 @@ function buildValidationWarnings({
       `인하대 ${dataCoverage.inhaArchetypeOnlyDepartmentCount}개 모집단위는 아직 아키타입 seed만 사용합니다.`,
     );
   }
+  if (dataCoverage.inhaNeedsReviewAdmissionDepartments.length > 0) {
+    warnings.push(
+      `인하대 needs-review 모집단위: ${dataCoverage.inhaNeedsReviewAdmissionDepartments.join(", ")}`,
+    );
+  }
 
   return warnings;
 }
@@ -713,6 +724,16 @@ async function buildPilotReadiness() {
         dataCoverage.inhaSourceBackedAdmissionDepartmentCount >= 70,
       severity: "blocker",
       detail: `${dataCoverage.sourceBackedDepartmentCount}개 학과가 출처 URL과 연결되어 있고, 인하대 ${dataCoverage.inhaSourceBackedAdmissionDepartmentCount}개 모집단위가 ADIGA 또는 공식 수강신청 과목 신호를 제공합니다.`,
+    },
+    {
+      id: "needs-review-transparency",
+      label: "needs-review 모집단위 명시",
+      ok: dataCoverage.inhaNeedsReviewAdmissionDepartments.length === 0,
+      severity: "warning",
+      detail:
+        dataCoverage.inhaNeedsReviewAdmissionDepartments.length === 0
+          ? "모든 인하대 모집단위가 출처 기반 과목 신호를 제공합니다."
+          : `${dataCoverage.inhaNeedsReviewAdmissionDepartments.join(", ")}는 공식 수강신청에서 전공탐색 1개 과목만 확인되어 리포트에서 needs-review로 표시됩니다.`,
     },
     {
       id: "student-validation-scenarios",

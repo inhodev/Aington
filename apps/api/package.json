@@ -13,6 +13,7 @@
     "data:collect": "tsx src/scripts/collectWebSources.ts",
     "data:collect:inha": "tsx src/scripts/collectInhaAdigaCurriculum.ts",
     "data:collect:inha:sugang": "tsx src/scripts/collectInhaSugangCourses.ts",
+    "pilot:audit": "tsx src/scripts/auditPilotReadiness.ts",
     "prisma:generate": "prisma generate",
     "db:push": "./node_modules/.bin/prisma db push",
     "db:seed": "tsx src/scripts/seedCurriculum.ts"

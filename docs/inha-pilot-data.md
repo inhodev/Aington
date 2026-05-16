@@ -30,7 +30,8 @@
 - `npm run data:collect --workspace @career-scope/api`: 6/6 sources fetched, `failedSourceCount: 0`; the single warning is the known Hanyang low generic-signal extraction warning.
 - `npm run data:collect:inha --workspace @career-scope/api`: 69 ADIGA public department pages found, 58 with non-empty course lists.
 - `npm run data:collect:inha:sugang --workspace @career-scope/api`: 18 Inha sugang departments checked, 15 course-backed, 3 partial.
-- Production `/api/validation-status`: 76 Inha units, 73 source-backed units, 3 archetype-only units, sample-size warning only.
+- Production `/api/validation-status`: 76 Inha units, 73 source-backed units, 3 archetype-only units, sample-size and named needs-review warnings only.
+- `npm run pilot:audit`: checks public API/Web, verifies Inha EE source trust, and confirms the remaining needs-review units are explicitly named.
 
 ## Current Limitation
 

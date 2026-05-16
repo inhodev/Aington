@@ -109,7 +109,10 @@ npm run typecheck  # 전체 워크스페이스 타입 검사
 npm run data:collect --workspace @career-scope/api # 공식 웹 출처 수집/정제 QA
 npm run data:collect:inha --workspace @career-scope/api # ADIGA 인하대 학과/교육과정 수집 QA
 npm run data:collect:inha:sugang --workspace @career-scope/api # 인하대 수강신청 전공 과목 수집 QA
+npm run pilot:audit # 공개 배포 API/Web 기준 파일럿 blocker 감사
 ```
+
+`pilot:audit`는 기본으로 `https://aington-api.vercel.app`와 `https://aington.vercel.app`를 검사합니다. 다른 환경을 검사하려면 `AINGTON_API_URL`과 `AINGTON_WEB_URL`을 지정합니다.
 
 ## API
 

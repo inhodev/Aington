@@ -314,7 +314,15 @@ test("validation status exposes funnel and data coverage", async () => {
     assert.ok(payload.funnel.counts.report_viewed >= 1);
     assert.ok(payload.dataCoverage.officialSourceCount >= 5);
     assert.ok(payload.dataCoverage.sourceBackedDepartmentCount >= 5);
+    assert.deepEqual(payload.dataCoverage.inhaNeedsReviewAdmissionDepartments, [
+      "경영융합학부",
+      "사회과학융합학부",
+      "인문융합학부",
+    ]);
     assert.ok(Array.isArray(payload.qaWarnings));
+    assert.ok(
+      payload.qaWarnings.some((warning: string) => warning.includes("needs-review 모집단위")),
+    );
   });
 });
 
@@ -469,6 +477,14 @@ test("pilot readiness reports launch checks", async () => {
       payload.checks.some(
         (check: { id: string; ok: boolean }) =>
           check.id === "official-source-coverage" && check.ok,
+      ),
+    );
+    assert.ok(
+      payload.checks.some(
+        (check: { id: string; detail: string; severity: string }) =>
+          check.id === "needs-review-transparency" &&
+          check.severity === "warning" &&
+          check.detail.includes("경영융합학부"),
       ),
     );
     assert.equal(typeof payload.nextAction, "string");

@@ -13,7 +13,8 @@ Last verified: 2026-05-16 21:05 KST
 | Public source collector | `npm run data:collect --workspace @career-scope/api` | Green, `failedSourceCount: 0`, `warningCount: 1` expected |
 | Inha ADIGA collector | `npm run data:collect:inha --workspace @career-scope/api` | Green, 69 public departments, 58 course-backed |
 | Inha sugang collector | `npm run data:collect:inha:sugang --workspace @career-scope/api` | Green, 18 checked, 15 course-backed, 3 partial |
-| Production API coverage | `GET https://aington-api.vercel.app/api/validation-status` | Green for data gates, sample-size warning only |
+| Repeatable production audit | `npm run pilot:audit` | Green, blocker checks pass and needs-review units are named |
+| Production API coverage | `GET https://aington-api.vercel.app/api/validation-status` | Green for data gates, sample-size and named needs-review warnings only |
 | Production web smoke | `https://aington.vercel.app` landing -> Inha EE report | Green, source trust shows Inha official sugang 64 signals |
 | Production auth smoke | Header `로그인` click | Green, opens profile notice without Next error |
 
@@ -34,6 +35,7 @@ Current data coverage from production:
 - `npm run data:collect --workspace @career-scope/api`
 - `npm run data:collect:inha --workspace @career-scope/api`
 - `npm run data:collect:inha:sugang --workspace @career-scope/api`
+- `npm run pilot:audit`
 - `GET /api/pilot-readiness` has no failed blocker checks.
 
 ## Product Gates
@@ -55,6 +57,7 @@ Current data coverage from production:
 - Inha official sugang course-backed departments stay at 15+.
 - Inha source-backed admission units stay at 70+ and archetype-only units stay at 5 or fewer.
 - The three remaining archetype-only Inha units are shown as needs-review, not as full official curriculum.
+- `/api/validation-status` and `npm run pilot:audit` name those needs-review units explicitly.
 - Live source collection has `failedSourceCount: 0`.
 - Known extraction warnings are documented before a test round. Current expected warnings: Hanyang page extraction yields fewer than three generic course signals; the Inha sugang base page yields fewer than three generic signals because detailed department extraction is handled by `data:collect:inha:sugang`.
 - New source data is reviewed before replacing seed rows.

@@ -234,8 +234,11 @@ type ValidationStatus = {
     inhaOfficialSugangMatchedAdmissionDepartmentCount?: number;
     inhaOfficialSugangCourseBackedAdmissionDepartmentCount?: number;
     inhaOfficialSugangPartialAdmissionDepartmentCount?: number;
+    inhaOfficialSugangPartialAdmissionDepartments?: string[];
     inhaSourceBackedAdmissionDepartmentCount?: number;
     inhaArchetypeOnlyDepartmentCount?: number;
+    inhaArchetypeOnlyAdmissionDepartments?: string[];
+    inhaNeedsReviewAdmissionDepartments?: string[];
     seedDepartmentCount: number;
     sourceBackedDepartmentCount: number;
     sourceBackedCourseCount: number;
@@ -2173,6 +2176,13 @@ function AppDashboard({
                     .inhaOfficialSugangCourseBackedAdmissionDepartmentCount ?? 0}개 · 출처 기반{" "}
                   {validationStatus.dataCoverage.inhaSourceBackedAdmissionDepartmentCount ?? 0}개 ·
                   아키타입 {validationStatus.dataCoverage.inhaArchetypeOnlyDepartmentCount ?? 0}개
+                </span>
+              )}
+              {(validationStatus.dataCoverage.inhaNeedsReviewAdmissionDepartments?.length ?? 0) >
+                0 && (
+                <span>
+                  needs-review:{" "}
+                  {validationStatus.dataCoverage.inhaNeedsReviewAdmissionDepartments?.join(", ")}
                 </span>
               )}
             </div>

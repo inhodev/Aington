@@ -12,6 +12,7 @@
     "dev:api": "npm run dev --workspace @career-scope/api",
     "build": "npm run build --workspace @career-scope/api && npm run build --workspace @career-scope/web",
     "lint": "npm run lint --workspace @career-scope/web",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "pilot:audit": "npm run pilot:audit --workspace @career-scope/api"
   }
 }
