@@ -715,6 +715,11 @@ async function buildPilotReadiness() {
   const counts = await countEventsByName();
   const dataCoverage = buildDataCoverageSnapshot();
   const intentSummary = await buildMeetingIntentSummary();
+  const inhaScenarioDepartments = new Set(
+    studentValidationScenarios
+      .filter((scenario) => normalizeSchoolForLookup(scenario.school) === "인하대")
+      .map((scenario) => scenario.department),
+  );
   const checks = [
     {
       id: "official-source-coverage",
@@ -738,9 +743,13 @@ async function buildPilotReadiness() {
     {
       id: "student-validation-scenarios",
       label: "학생 검증 시나리오",
-      ok: studentValidationScenarios.length >= 3,
+      ok:
+        studentValidationScenarios.length >= 3 &&
+        inhaScenarioDepartments.has("컴퓨터공학과") &&
+        inhaScenarioDepartments.has("인공지능공학과") &&
+        inhaScenarioDepartments.has("데이터사이언스학과"),
       severity: "blocker",
-      detail: `${studentValidationScenarios.length}개 시나리오가 API smoke test에 연결되어 있습니다.`,
+      detail: `${studentValidationScenarios.length}개 인하대 파일럿 시나리오가 API smoke test에 연결되어 있습니다: ${[...inhaScenarioDepartments].join(", ")}.`,
     },
     {
       id: "funnel-telemetry",

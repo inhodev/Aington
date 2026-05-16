@@ -45,6 +45,7 @@ Current data coverage from production:
 - Recommended peer cards explain why the peer was recommended.
 - Peer or meeting interest creates a server-side intent.
 - Dashboard shows saved interests and MVP validation status.
+- Student validation scenarios target Inha students: 컴퓨터공학과, 인공지능공학과, 데이터사이언스학과.
 - Report source trust shows the actual tier: ADIGA public curriculum, Inha current-term sugang signal, database, or needs-review seed.
 - If the API is unavailable, report/signup/dashboard surfaces show the server-unavailable warning instead of silently implying saved actions.
 - Interest records shown in the dashboard must be server-confirmed; API failure must not create local-only KPI records.

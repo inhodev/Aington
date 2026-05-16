@@ -381,6 +381,15 @@ test("inha departments endpoint exposes the admissions-backed catalog", async ()
 
 test("student validation scenarios complete the MVP API flow", async () => {
   await withApi(async (baseUrl) => {
+    assert.deepEqual(
+      studentValidationScenarios.map((scenario) => scenario.school),
+      ["인하대학교", "인하대학교", "인하대학교"],
+    );
+    assert.deepEqual(
+      studentValidationScenarios.map((scenario) => scenario.department),
+      ["컴퓨터공학과", "인공지능공학과", "데이터사이언스학과"],
+    );
+
     for (const scenario of studentValidationScenarios) {
       const query = new URLSearchParams({
         school: scenario.school,
