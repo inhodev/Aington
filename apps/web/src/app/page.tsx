@@ -722,6 +722,15 @@ function readAuthSession(): AuthSession | null {
   }
 }
 
+function isAuthSession(value: unknown): value is AuthSession {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const session = value as Partial<AuthSession>;
+  return Boolean(session.profileId && session.profileToken);
+}
+
 function saveAuthSession(session: AuthSession) {
   window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
 }
@@ -1096,7 +1105,7 @@ export default function Home() {
   }
 
   function completeLogin(nextSession: AuthSession | null = authSession) {
-    const session = nextSession ?? readAuthSession();
+    const session = isAuthSession(nextSession) ? nextSession : readAuthSession();
     if (!session) {
       setStep("signupNotice");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1659,7 +1668,7 @@ function Header({
             </button>
           </>
         ) : (
-          <button className="nav-text-button" onClick={onLogin}>
+          <button className="nav-text-button" onClick={() => onLogin()}>
             로그인
           </button>
         )}
